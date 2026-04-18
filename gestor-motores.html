@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestor de Motores — PPA Oeste</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --or:#E8580A;--or-h:#C94708;--or-10:rgba(232,88,10,.10);--or-20:rgba(232,88,10,.20);
+  --ink:#0D0D0D;--text:#2D2D2D;--mu:#6B6B6B;--bd:#E2E2E2;--sf:#F7F7F5;--wh:#fff;
+  --gr:#16A34A;--gr-bg:#F0FDF4;--gr-bd:#BBF7D0;
+  --re:#DC2626;--re-bg:#FEF2F2;--re-bd:#FECACA;
+  --r:10px;--r2:7px;
+}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:#F0EFEC;color:var(--text);-webkit-font-smoothing:antialiased;min-height:100vh}
+/* LAYOUT */
+.app{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
+/* SIDEBAR */
+.sidebar{background:var(--ink);padding:24px 0;display:flex;flex-direction:column}
+.sb-logo{padding:0 20px 24px;border-bottom:1px solid #1f1f1f}
+.sb-logo-t{font-size:15px;font-weight:800;color:#fff;letter-spacing:-.02em}
+.sb-logo-t span{color:var(--or)}
+.sb-logo-s{font-size:10px;color:#444;margin-top:3px;font-weight:500;text-transform:uppercase;letter-spacing:.06em}
+.sb-nav{padding:16px 0;flex:1}
+.sb-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#333;padding:8px 20px 4px}
+.sb-item{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:#777;cursor:pointer;transition:all .15s;border-left:3px solid transparent}
+.sb-item:hover{color:#ccc;background:rgba(255,255,255,.04)}
+.sb-item.on{color:#fff;background:rgba(255,255,255,.07);border-left-color:var(--or)}
+.sb-item .si-ic{width:18px;text-align:center;font-size:15px}
+.sb-footer{padding:16px 20px;border-top:1px solid #1a1a1a}
+.sb-footer a{font-size:12px;color:#444;font-weight:500;text-decoration:none;display:flex;align-items:center;gap:8px;transition:color .15s}
+.sb-footer a:hover{color:#888}
+/* MAIN */
+.main{overflow-y:auto}
+.topbar{background:var(--wh);border-bottom:1px solid var(--bd);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.topbar-title{font-size:16px;font-weight:800;color:var(--ink);letter-spacing:-.02em}
+.topbar-sub{font-size:12px;color:var(--mu);margin-top:1px}
+.btn-add{background:var(--or);color:#fff;padding:9px 18px;border-radius:var(--r2);font-size:13px;font-weight:700;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;display:flex;align-items:center;gap:7px;transition:all .15s}
+.btn-add:hover{background:var(--or-h)}
+/* CONTENT */
+.content{padding:24px 28px}
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat{background:var(--wh);border:1px solid var(--bd);border-radius:var(--r);padding:16px 18px}
+.stat-val{font-size:26px;font-weight:800;color:var(--ink);letter-spacing:-.03em;line-height:1}
+.stat-lbl{font-size:11px;color:var(--mu);margin-top:4px;font-weight:500}
+.stat-or .stat-val{color:var(--or)}
+/* LISTA */
+.lista-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.lista-titulo{font-size:14px;font-weight:700;color:var(--ink)}
+.filtros-lista{display:flex;gap:8px}
+.f-sel{padding:7px 11px;border:1.5px solid var(--bd);border-radius:var(--r2);font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;color:var(--ink);background:var(--wh);outline:none;cursor:pointer}
+.motor-list{display:flex;flex-direction:column;gap:8px}
+.motor-row{background:var(--wh);border:1.5px solid var(--bd);border-radius:var(--r);padding:14px 18px;display:grid;grid-template-columns:56px 1fr auto auto auto;align-items:center;gap:16px;transition:all .15s}
+.motor-row:hover{border-color:var(--bd);box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.mr-thumb{width:52px;height:52px;border-radius:var(--r2);background:var(--sf);border:1px solid var(--bd);object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;overflow:hidden}
+.mr-thumb img{width:100%;height:100%;object-fit:cover}
+.mr-info{}
+.mr-nome{font-size:14px;font-weight:700;color:var(--ink);letter-spacing:-.01em}
+.mr-tipo{font-size:11px;color:var(--mu);margin-top:2px;display:flex;align-items:center;gap:6px}
+.mr-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:100px}
+.mr-badge.correr{background:#EFF6FF;color:#1E40AF}
+.mr-badge.batente{background:#F0FDF4;color:#166534}
+.mr-badge.garagem{background:#FFFBEB;color:#92400E}
+.mr-badge.cctv{background:#FDF4FF;color:#6B21A8}
+.mr-price{font-size:16px;font-weight:800;color:var(--ink);letter-spacing:-.02em;text-align:right;white-space:nowrap}
+.mr-price-sub{font-size:10px;color:var(--mu);text-align:right;margin-top:1px}
+.mr-status{text-align:center}
+.status-pill{font-size:10px;font-weight:700;padding:4px 10px;border-radius:100px;white-space:nowrap}
+.status-pill.ativo{background:var(--gr-bg);color:var(--gr);border:1px solid var(--gr-bd)}
+.status-pill.inativo{background:var(--re-bg);color:var(--re);border:1px solid var(--re-bd)}
+.mr-actions{display:flex;gap:6px}
+.btn-edit{padding:7px 12px;border:1.5px solid var(--bd);border-radius:var(--r2);font-size:12px;font-weight:600;color:var(--ink);background:var(--wh);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s}
+.btn-edit:hover{border-color:var(--or);color:var(--or)}
+.btn-del{padding:7px 10px;border:1.5px solid var(--re-bd);border-radius:var(--r2);font-size:12px;color:var(--re);background:var(--re-bg);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s}
+.btn-del:hover{background:var(--re);color:#fff}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--wh);border-radius:16px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-head{padding:22px 24px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--wh);z-index:1}
+.modal-head h2{font-size:18px;font-weight:800;color:var(--ink);letter-spacing:-.02em}
+.btn-close{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--bd);background:var(--wh);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--mu);transition:all .15s}
+.btn-close:hover{background:var(--sf);color:var(--ink)}
+.modal-body{padding:22px 24px}
+/* FORM */
+.fg{margin-bottom:16px}
+.fg label{display:block;font-size:12px;font-weight:700;color:var(--text);margin-bottom:5px;letter-spacing:.01em}
+.fg input,.fg select,.fg textarea{width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:var(--r2);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:var(--ink);background:var(--wh);outline:none;transition:border-color .15s}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--or)}
+.fg textarea{resize:vertical;min-height:72px}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fg-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+/* UPLOAD FOTO */
+.upload-area{border:2px dashed var(--bd);border-radius:var(--r);padding:28px;text-align:center;cursor:pointer;transition:all .2s;position:relative;background:var(--sf)}
+.upload-area:hover,.upload-area.drag{border-color:var(--or);background:var(--or-10)}
+.upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.upload-ic{font-size:32px;margin-bottom:8px}
+.upload-t{font-size:13px;font-weight:600;color:var(--ink)}
+.upload-s{font-size:11px;color:var(--mu);margin-top:3px}
+.preview-img{width:100%;height:140px;object-fit:contain;border-radius:var(--r2);border:1px solid var(--bd);display:none}
+/* TAGS inline */
+.tags-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tag-chip{display:inline-flex;align-items:center;gap:4px;background:var(--sf);border:1px solid var(--bd);border-radius:100px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--ink)}
+.tag-chip .rm{cursor:pointer;color:var(--mu);font-size:14px;line-height:1}
+.tag-chip .rm:hover{color:var(--re)}
+.tag-input-wrap{display:flex;gap:6px;margin-top:6px}
+.tag-input-wrap input{flex:1}
+.btn-tag-add{padding:10px 14px;border:1.5px solid var(--bd);border-radius:var(--r2);font-size:12px;font-weight:600;color:var(--or);background:var(--or-10);border-color:var(--or-20);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;transition:all .15s}
+.btn-tag-add:hover{background:var(--or);color:#fff}
+/* MODAL FOOTER */
+.modal-foot{padding:16px 24px;border-top:1px solid var(--bd);display:flex;gap:10px;justify-content:flex-end;background:var(--sf);border-radius:0 0 16px 16px}
+.btn-cancel{padding:10px 20px;border:1.5px solid var(--bd);border-radius:var(--r2);font-size:13px;font-weight:600;color:var(--mu);background:var(--wh);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s}
+.btn-cancel:hover{border-color:var(--bd);color:var(--ink)}
+.btn-save{padding:10px 24px;background:var(--or);color:#fff;border:none;border-radius:var(--r2);font-size:13px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s}
+.btn-save:hover{background:var(--or-h)}
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--ink);color:#fff;padding:12px 20px;border-radius:var(--r2);font-size:13px;font-weight:600;z-index:200;transform:translateY(80px);opacity:0;transition:all .3s}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{border-left:3px solid var(--gr)}
+.toast.err{border-left:3px solid var(--re)}
+/* EMPTY */
+.empty{text-align:center;padding:60px 20px;color:var(--mu)}
+.empty-ic{font-size:48px;margin-bottom:16px}
+.empty-t{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:6px}
+.empty-s{font-size:13px;color:var(--mu)}
+/* SECÇÃO PREÇO */
+.preco-row{background:var(--or-10);border:1px solid var(--or-20);border-radius:var(--r2);padding:12px 14px;margin-top:6px}
+.preco-row label{color:var(--or)!important}
+/* TOGGLE ATIVO */
+.toggle-wrap{display:flex;align-items:center;gap:10px;padding:14px 0}
+.toggle{width:44px;height:24px;background:var(--bd);border-radius:100px;position:relative;cursor:pointer;transition:background .2s;border:none}
+.toggle.on{background:var(--gr)}
+.toggle::after{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:3px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle.on::after{left:23px}
+.toggle-lbl{font-size:13px;font-weight:600;color:var(--ink)}
+.toggle-sub{font-size:11px;color:var(--mu)}
+@media(max-width:900px){
+  .app{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .motor-row{grid-template-columns:44px 1fr;gap:10px}
+  .mr-price,.mr-status,.mr-actions{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-t">PPA <span>Oeste</span></div>
+      <div class="sb-logo-s">Painel de gestão</div>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-label">Catálogo</div>
+      <div class="sb-item on" onclick="showView('motores')"><span class="si-ic">⚙</span>Motores</div>
+      <div class="sb-item" onclick="showView('cctv')"><span class="si-ic">📷</span>CCTV</div>
+      <div class="sb-item" onclick="showView('acess')"><span class="si-ic">🔧</span>Acessórios</div>
+      <div class="sb-label" style="margin-top:12px">Geral</div>
+      <div class="sb-item" onclick="exportarJSON()"><span class="si-ic">📤</span>Exportar dados</div>
+      <div class="sb-item" onclick="importarJSON()"><span class="si-ic">📥</span>Importar dados</div>
+    </nav>
+    <div class="sb-footer">
+      <a href="ppa-final.html" target="_blank">↗ Ver site ao vivo</a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title" id="tb-title">Motores</div>
+        <div class="topbar-sub" id="tb-sub">Gere os motores do teu catálogo</div>
+      </div>
+      <button class="btn-add" onclick="abrirModal()">+ Adicionar motor</button>
+    </div>
+
+    <div class="content">
+      <!-- STATS -->
+      <div class="stats">
+        <div class="stat"><div class="stat-val" id="st-total">0</div><div class="stat-lbl">Total no catálogo</div></div>
+        <div class="stat stat-or"><div class="stat-val" id="st-ativos">0</div><div class="stat-lbl">Ativos no site</div></div>
+        <div class="stat"><div class="stat-val" id="st-correr">0</div><div class="stat-lbl">Portões de correr</div></div>
+        <div class="stat"><div class="stat-val" id="st-bat">0</div><div class="stat-lbl">Portões de batente</div></div>
+      </div>
+
+      <!-- LISTA -->
+      <div class="lista-header">
+        <div class="lista-titulo" id="lista-titulo">Todos os motores</div>
+        <div class="filtros-lista">
+          <select class="f-sel" onchange="filtrarLista(this.value)">
+            <option value="">Todos os tipos</option>
+            <option value="correr">Correr</option>
+            <option value="batente">Batente</option>
+            <option value="garagem">Garagem</option>
+            <option value="cctv">CCTV</option>
+            <option value="acess">Acessórios</option>
+          </select>
+          <select class="f-sel" onchange="filtrarStatus(this.value)">
+            <option value="">Todos</option>
+            <option value="ativo">Ativos</option>
+            <option value="inativo">Inativos</option>
+          </select>
+        </div>
+      </div>
+      <div class="motor-list" id="lista"></div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL ADICIONAR/EDITAR -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modal-title">Adicionar motor</h2>
+      <button class="btn-close" onclick="fecharModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="f-id">
+
+      <!-- FOTO -->
+      <div class="fg">
+        <label>Foto do produto</label>
+        <div class="upload-area" id="upload-area">
+          <input type="file" accept="image/*" onchange="previewFoto(this)">
+          <div class="upload-ic">📷</div>
+          <div class="upload-t">Clica ou arrasta a foto aqui</div>
+          <div class="upload-s">JPG, PNG, WEBP — máx. 4MB</div>
+        </div>
+        <img class="preview-img" id="preview-img" alt="Preview">
+      </div>
+
+      <div class="fg-row">
+        <div class="fg">
+          <label>Tipo *</label>
+          <select id="f-tipo" required>
+            <option value="">Seleciona</option>
+            <option value="correr">Portão de correr</option>
+            <option value="batente">Portão de batente</option>
+            <option value="garagem">Porta de garagem</option>
+            <option value="cctv">CCTV</option>
+            <option value="acess">Acessório</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Gama / Série</label>
+          <input type="text" id="f-gama" placeholder="Ex: DZ HUB · Portão de correr">
+        </div>
+      </div>
+
+      <div class="fg">
+        <label>Nome do produto *</label>
+        <input type="text" id="f-nome" placeholder="Ex: Motor DZ HUB 550 Jet Flex Full Range" required>
+      </div>
+
+      <div class="fg">
+        <label>Descrição curta</label>
+        <textarea id="f-desc" placeholder="Descrição que aparece no card do site. Máx. 2 linhas."></textarea>
+      </div>
+
+      <div class="fg-row3">
+        <div class="fg preco-row">
+          <label>Preço s/ IVA (€) *</label>
+          <input type="number" id="f-preco" placeholder="434" step="0.01" required>
+        </div>
+        <div class="fg preco-row">
+          <label>Preço c/ IVA (€)</label>
+          <input type="number" id="f-preco-iva" placeholder="533.82" step="0.01" readonly style="background:var(--sf)">
+        </div>
+        <div class="fg">
+          <label>Unidade</label>
+          <select id="f-unidade">
+            <option value="unidade">Por unidade</option>
+            <option value="kit">Por kit</option>
+            <option value="par">Por par</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ESPECIFICAÇÕES -->
+      <div class="fg">
+        <label>Tags / Especificações</label>
+        <div class="tags-wrap" id="tags-wrap"></div>
+        <div class="tag-input-wrap">
+          <input type="text" id="tag-input" placeholder="Ex: Até 550 kg — Enter para adicionar" onkeydown="if(event.key==='Enter'){event.preventDefault();addTag()}">
+          <button class="btn-tag-add" onclick="addTag()">+ Adicionar</button>
+        </div>
+      </div>
+
+      <div class="fg-row">
+        <div class="fg">
+          <label>Peso máximo (kg)</label>
+          <input type="number" id="f-peso" placeholder="550">
+        </div>
+        <div class="fg">
+          <label>Uso principal</label>
+          <select id="f-uso">
+            <option value="residencial">Residencial</option>
+            <option value="industrial">Industrial</option>
+            <option value="condominio">Condomínio</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- TOGGLE ATIVO -->
+      <div class="toggle-wrap">
+        <button class="toggle on" id="toggle-ativo" onclick="toggleAtivo()"></button>
+        <div>
+          <div class="toggle-lbl" id="toggle-lbl">Visível no site</div>
+          <div class="toggle-sub">Desativa para esconder temporariamente</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-save" onclick="guardarMotor()">Guardar motor</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── ESTADO ──
+let motores = JSON.parse(localStorage.getItem('ppa_motores') || '[]');
+let editId = null;
+let tags = [];
+let fotoBase64 = null;
+let filtroTipo = '';
+let filtroStatus = '';
+
+// ── RENDER ──
+function render() {
+  let lista = motores.filter(m => {
+    if (filtroTipo && m.tipo !== filtroTipo) return false;
+    if (filtroStatus && m.status !== filtroStatus) return false;
+    return true;
+  });
+
+  const el = document.getElementById('lista');
+  if (!motores.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-ic">⚙</div><div class="empty-t">Ainda não tens motores</div><div class="empty-s">Clica em "+ Adicionar motor" para começar</div></div>`;
+  } else if (!lista.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-ic">🔍</div><div class="empty-t">Nenhum resultado</div><div class="empty-s">Tenta mudar os filtros</div></div>`;
+  } else {
+    el.innerHTML = lista.map(m => `
+      <div class="motor-row">
+        <div class="mr-thumb">${m.foto ? `<img src="${m.foto}" alt="">` : '⚙'}</div>
+        <div class="mr-info">
+          <div class="mr-nome">${m.nome}</div>
+          <div class="mr-tipo">
+            <span class="mr-badge ${m.tipo}">${tipoLabel(m.tipo)}</span>
+            ${m.gama ? `<span style="color:var(--mu2)">${m.gama}</span>` : ''}
+          </div>
+        </div>
+        <div class="mr-price">
+          ${m.precoIva ? m.precoIva.toFixed(2) + '€' : '—'}
+          <div class="mr-price-sub">c/ IVA · ${m.preco ? m.preco + '€ s/ IVA' : ''}</div>
+        </div>
+        <div class="mr-status">
+          <span class="status-pill ${m.status}">${m.status === 'ativo' ? 'Ativo' : 'Inativo'}</span>
+        </div>
+        <div class="mr-actions">
+          <button class="btn-edit" onclick="editarMotor('${m.id}')">Editar</button>
+          <button class="btn-del" onclick="eliminarMotor('${m.id}')">✕</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // stats
+  document.getElementById('st-total').textContent = motores.length;
+  document.getElementById('st-ativos').textContent = motores.filter(m => m.status === 'ativo').length;
+  document.getElementById('st-correr').textContent = motores.filter(m => m.tipo === 'correr').length;
+  document.getElementById('st-bat').textContent = motores.filter(m => m.tipo === 'batente').length;
+}
+
+function tipoLabel(t) {
+  return {correr:'Correr',batente:'Batente',garagem:'Garagem',cctv:'CCTV',acess:'Acessório'}[t] || t;
+}
+
+function filtrarLista(v) { filtroTipo = v; render(); }
+function filtrarStatus(v) { filtroStatus = v; render(); }
+
+// ── MODAL ──
+function abrirModal(id) {
+  editId = id || null;
+  tags = [];
+  fotoBase64 = null;
+  document.getElementById('modal-title').textContent = id ? 'Editar motor' : 'Adicionar motor';
+  document.getElementById('preview-img').style.display = 'none';
+  document.getElementById('upload-area').style.display = 'block';
+  document.getElementById('tags-wrap').innerHTML = '';
+
+  if (id) {
+    const m = motores.find(x => x.id === id);
+    document.getElementById('f-id').value = m.id;
+    document.getElementById('f-tipo').value = m.tipo || '';
+    document.getElementById('f-gama').value = m.gama || '';
+    document.getElementById('f-nome').value = m.nome || '';
+    document.getElementById('f-desc').value = m.desc || '';
+    document.getElementById('f-preco').value = m.preco || '';
+    document.getElementById('f-preco-iva').value = m.precoIva || '';
+    document.getElementById('f-unidade').value = m.unidade || 'unidade';
+    document.getElementById('f-peso').value = m.peso || '';
+    document.getElementById('f-uso').value = m.uso || 'residencial';
+    const tog = document.getElementById('toggle-ativo');
+    tog.className = 'toggle ' + (m.status === 'ativo' ? 'on' : '');
+    document.getElementById('toggle-lbl').textContent = m.status === 'ativo' ? 'Visível no site' : 'Oculto no site';
+    tags = m.tags || [];
+    fotoBase64 = m.foto || null;
+    if (fotoBase64) {
+      document.getElementById('preview-img').src = fotoBase64;
+      document.getElementById('preview-img').style.display = 'block';
+      document.getElementById('upload-area').style.display = 'none';
+    }
+  } else {
+    ['f-id','f-tipo','f-gama','f-nome','f-desc','f-preco','f-preco-iva','f-peso'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.value = '';
+    });
+    document.getElementById('f-unidade').value = 'unidade';
+    document.getElementById('f-uso').value = 'residencial';
+    const tog = document.getElementById('toggle-ativo');
+    tog.className = 'toggle on';
+    document.getElementById('toggle-lbl').textContent = 'Visível no site';
+  }
+  renderTags();
+  document.getElementById('modal').classList.add('open');
+  document.getElementById('f-nome').focus();
+}
+
+function fecharModal() { document.getElementById('modal').classList.remove('open'); }
+
+// IVA auto-calculate
+document.getElementById('f-preco').addEventListener('input', function() {
+  const v = parseFloat(this.value);
+  if (!isNaN(v)) document.getElementById('f-preco-iva').value = (v * 1.23).toFixed(2);
+});
+
+// ── FOTO ──
+function previewFoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 4 * 1024 * 1024) { toast('Foto demasiado grande. Máx. 4MB.', 'err'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    fotoBase64 = e.target.result;
+    document.getElementById('preview-img').src = fotoBase64;
+    document.getElementById('preview-img').style.display = 'block';
+    document.getElementById('upload-area').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── TAGS ──
+function addTag() {
+  const inp = document.getElementById('tag-input');
+  const v = inp.value.trim();
+  if (!v || tags.includes(v)) return;
+  tags.push(v);
+  inp.value = '';
+  renderTags();
+}
+function removeTag(i) { tags.splice(i, 1); renderTags(); }
+function renderTags() {
+  document.getElementById('tags-wrap').innerHTML = tags.map((t, i) =>
+    `<span class="tag-chip">${t}<span class="rm" onclick="removeTag(${i})">×</span></span>`
+  ).join('');
+}
+
+// ── TOGGLE ──
+function toggleAtivo() {
+  const tog = document.getElementById('toggle-ativo');
+  const isOn = tog.classList.contains('on');
+  tog.className = 'toggle ' + (isOn ? '' : 'on');
+  document.getElementById('toggle-lbl').textContent = isOn ? 'Oculto no site' : 'Visível no site';
+}
+
+// ── GUARDAR ──
+function guardarMotor() {
+  const nome = document.getElementById('f-nome').value.trim();
+  const tipo = document.getElementById('f-tipo').value;
+  const preco = parseFloat(document.getElementById('f-preco').value);
+  if (!nome) { toast('O nome é obrigatório.', 'err'); return; }
+  if (!tipo) { toast('Seleciona o tipo.', 'err'); return; }
+
+  const isAtivo = document.getElementById('toggle-ativo').classList.contains('on');
+  const motor = {
+    id: editId || 'm_' + Date.now(),
+    tipo, nome,
+    gama: document.getElementById('f-gama').value.trim(),
+    desc: document.getElementById('f-desc').value.trim(),
+    preco: isNaN(preco) ? null : preco,
+    precoIva: isNaN(preco) ? null : parseFloat((preco * 1.23).toFixed(2)),
+    unidade: document.getElementById('f-unidade').value,
+    peso: document.getElementById('f-peso').value || null,
+    uso: document.getElementById('f-uso').value,
+    tags: [...tags],
+    foto: fotoBase64,
+    status: isAtivo ? 'ativo' : 'inativo',
+    updated: new Date().toISOString()
+  };
+
+  if (editId) {
+    const idx = motores.findIndex(m => m.id === editId);
+    motores[idx] = motor;
+  } else {
+    motores.push(motor);
+  }
+
+  localStorage.setItem('ppa_motores', JSON.stringify(motores));
+  fecharModal();
+  render();
+  toast(editId ? 'Motor atualizado!' : 'Motor adicionado!', 'ok');
+}
+
+// ── EDITAR / ELIMINAR ──
+function editarMotor(id) { abrirModal(id); }
+function eliminarMotor(id) {
+  if (!confirm('Eliminar este motor?')) return;
+  motores = motores.filter(m => m.id !== id);
+  localStorage.setItem('ppa_motores', JSON.stringify(motores));
+  render();
+  toast('Motor eliminado.', 'ok');
+}
+
+// ── EXPORT / IMPORT ──
+function exportarJSON() {
+  const blob = new Blob([JSON.stringify(motores, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ppa_motores_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  toast('Dados exportados!', 'ok');
+}
+function importarJSON() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.json';
+  inp.onchange = e => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const dados = JSON.parse(ev.target.result);
+        if (!Array.isArray(dados)) throw new Error();
+        motores = dados;
+        localStorage.setItem('ppa_motores', JSON.stringify(motores));
+        render();
+        toast(`${dados.length} motores importados!`, 'ok');
+      } catch { toast('Ficheiro inválido.', 'err'); }
+    };
+    reader.readAsText(e.target.files[0]);
+  };
+  inp.click();
+}
+
+// ── SIDEBAR VIEWS ──
+function showView(v) {
+  document.querySelectorAll('.sb-item').forEach(el => el.classList.remove('on'));
+  event.currentTarget.classList.add('on');
+  filtroTipo = v === 'motores' ? '' : v;
+  const titles = {motores:'Motores', cctv:'CCTV', acess:'Acessórios'};
+  document.getElementById('tb-title').textContent = titles[v] || 'Motores';
+  document.getElementById('tb-sub').textContent = 'Gere os produtos do teu catálogo';
+  document.querySelector('.btn-add').textContent = '+ Adicionar ' + (titles[v]||'motor').toLowerCase().replace(' e gravadores','');
+  render();
+}
+
+// ── TOAST ──
+function toast(msg, tipo) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + (tipo||'ok');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = 'toast', 3000);
+}
+
+// ── FECHAR MODAL NO OVERLAY ──
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) fecharModal();
+});
+
+// ── INIT ──
+render();
+</script>
+</body>
+</html>
