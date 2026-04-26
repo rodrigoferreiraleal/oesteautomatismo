@@ -823,14 +823,26 @@ function okForm(e){
   const wa   = form.querySelector('input[type="tel"]').value.trim();
   const zona = form.querySelector('select').value;
   if(!nome || !wa || !zona){ alert('Por favor preenche todos os campos.'); return; }
-  const msg = 'Olá! Quero ser parceiro instalador PPA Oeste.\n\nNome/Empresa: ' + nome +
-    '\nWhatsApp: ' + wa +
-    '\nZona: ' + zona +
-    '\n\nAguardo contacto. Obrigado!';
+
+  // Guardar lead no Supabase
+  fetch('https://gpanomdrhvnqqdutdtfe.supabase.co/rest/v1/leads_instaladores', {
+    method: 'POST',
+    headers: {
+      'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwYW5vbWRyaHZucXFkdXRkdGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMTU5MTgsImV4cCI6MjA5Mjc5MTkxOH0.7OIm6W_MmFdASO3T6JfNw9wtv5o03ZxOkXt-Fu7PVSI',
+      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwYW5vbWRyaHZucXFkdXRkdGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMTU5MTgsImV4cCI6MjA5Mjc5MTkxOH0.7OIm6W_MmFdASO3T6JfNw9wtv5o03ZxOkXt-Fu7PVSI',
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ nome, whatsapp: wa, zona })
+  }).catch(err => console.warn('Erro ao guardar lead:', err));
+
   // Mostrar confirmação visual
   document.getElementById('fc').style.display='none';
   document.getElementById('fok').style.display='block';
+
   // Abrir WhatsApp com os dados
+  const msg = 'Olá! Quero ser parceiro instalador PPA Oeste.\n\nNome/Empresa: ' + nome +
+    '\nWhatsApp: ' + wa + '\nZona: ' + zona + '\n\nAguardo contacto. Obrigado!';
   setTimeout(function(){
     window.open('https://wa.me/351926961099?text=' + encodeURIComponent(msg), '_blank');
   }, 400);
@@ -1095,12 +1107,14 @@ function traduzir(lang){
 
 // ── CARRINHO ──
 const CART_FOTOS = {};
-document.addEventListener('DOMContentLoaded', function() {
+function atualizarCartFotos() {
   document.querySelectorAll('.pc').forEach(card => {
     const nome = card.querySelector('.pc-name');
     const img = card.querySelector('.pc-img img');
     if(nome && img) CART_FOTOS[nome.textContent.trim()] = img.src;
   });
+}
+document.addEventListener('DOMContentLoaded', function() {
   renderCarrinho();
 });
 
@@ -1278,7 +1292,11 @@ function criarCardProduto(p) {
     <div class="pc-brand">${p.marca}</div>
     <div class="pc-name">${p.nome}</div>
     ${tags ? `<div class="pc-tags">${tags}</div>` : ''}
-    ${p.descricao ? `<div class="pc-desc">${p.descricao}</div>` : ''}
+    ${(function(){
+      const lang = typeof langAtual !== 'undefined' ? langAtual : 'pt';
+      const desc = (lang !== 'pt' && p['descricao_'+lang]) ? p['descricao_'+lang] : p.descricao;
+      return desc ? `<div class="pc-desc">${desc}</div>` : '';
+    })()}
     ${wifiBadge}
     <div class="pc-price-row">
       <div class="pc-price">
@@ -1356,8 +1374,8 @@ async function carregarProdutos() {
       }
     });
 
-    // Reinit carrinho buttons (adicionarAoCarrinho usa btn.closest)
-    // Funciona automaticamente pois usa event delegation via onclick inline
+    // Actualizar fotos do carrinho após render
+    atualizarCartFotos();
 
   } catch(e) {
     console.error('Erro a carregar produtos:', e);
