@@ -1249,15 +1249,22 @@ const ANON_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIs
 
 // Mapeamento de tipo/subtipo para tab
 const TIPO_PARA_TAB = {
-  'correr':  'correr',
-  'batente': 'batente',
-  'garagem': 'garagem',
-  'acess':   'acess',
-  'acessorio': 'acess',
-  'cctv':    'cctv2',
-  'acesso':  'acesso',
-  'cancela': 'acesso',
-  'barreira':'acesso',
+  'correr':       'correr',
+  'batente':      'batente',
+  'garagem':      'garagem',
+  'acess':        'acess',
+  'acessorio':    'acess',
+  'acessórios':   'acess',
+  'cctv':         'cctv2',
+  'cctv2':        'cctv2',
+  'camara':       'cctv2',
+  'câmara':       'cctv2',
+  'acesso':       'acesso',
+  'cancela':      'acesso',
+  'barreira':     'acesso',
+  'controladora': 'acesso',
+  'controlo':     'acesso',
+  'leitor':       'acesso',
 };
 
 function inferirTab(produto) {
@@ -1267,13 +1274,18 @@ function inferirTab(produto) {
   const marca = (produto.marca || '').toLowerCase();
 
   // Por tipo explícito
+  // Match exacto primeiro
+  if (TIPO_PARA_TAB[tipo]) return TIPO_PARA_TAB[tipo];
+  if (TIPO_PARA_TAB[sub]) return TIPO_PARA_TAB[sub];
+  // Match parcial para compatibilidade
   for (const [key, tab] of Object.entries(TIPO_PARA_TAB)) {
-    if (tipo.includes(key) || sub.includes(key)) return tab;
+    if (key.length > 4 && (tipo.includes(key) || sub.includes(key))) return tab;
   }
   // Por nome
   if (nome.includes('câmer') || nome.includes('camera') || nome.includes('dome') || nome.includes('360 mp') || nome.includes('ip dome')) return 'cctv2';
-  if (nome.includes('cancela') || nome.includes('barreira')) return 'acesso';
-  if (nome.includes('dz ') || nome.includes('dz-') || nome.includes('hub') || nome.includes('cube') || nome.includes('stark') || nome.includes('rio') || nome.includes('ind ') || nome.includes('brutalle')) return 'correr';
+  if (nome.includes('cancela') || nome.includes('barreira') || nome.includes('controladora') || nome.includes('controlo') || nome.includes('control') || nome.includes('leitor') || nome.includes('rfid') || nome.includes('biometr')) return 'acesso';
+  if (nome.startsWith('base ') || nome.startsWith('base ')) return 'acess';
+  if (nome.includes('dz ') || nome.includes('dz-') || (nome.includes('hub') && !nome.startsWith('base')) || (nome.includes('cube') && !nome.startsWith('base')) || (nome.includes('stark') && !nome.startsWith('base')) || (nome.includes('rio') && !nome.startsWith('base')) || nome.includes('ind ') || nome.includes('brutalle')) return 'correr';
   if (nome.includes('bh ') || /^bh/.test(nome)) return 'garagem';
   if (nome.includes('pivo') || nome.includes('sk ') || nome.includes('sk-') || nome.includes('predial')) return 'batente';
   if (nome.includes('zap') || nome.includes('receptor') || nome.includes('fotoc') || nome.includes('programador') || nome.includes('contatto') || nome.includes('sinaleira') || nome.includes('base ') || nome.includes('cremalheira') || nome.includes('fechadura')) return 'acess';
@@ -1336,7 +1348,7 @@ function criarCardProduto(p) {
         <span class="pc-piva">${precoIva.toFixed(2)}€</span>
       </div>
     </div>
-    ${p.preco_instalador > 0 ? `<div class="pc-inst"><span class="pc-inst-lbl">Instalador:</span><span class="pc-inst-val">${p.preco_instalador.toFixed(2)}€</span></div>` : ''}
+    
   </div>
   <div class="pc-foot">
     <button class="btn-cart" onclick="adicionarAoCarrinho(this)">
