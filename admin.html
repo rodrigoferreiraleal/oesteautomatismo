@@ -570,7 +570,11 @@ Esta ação não pode ser desfeita.`)) return;
 async function carregarLeads() {
   document.getElementById('leads-body').innerHTML = '<div class="admin-loading"><div class="spin"></div>A carregar...</div>';
   try {
-    const leads = await api('/leads');
+    const r = await fetch('https://gpanomdrhvnqqdutdtfe.supabase.co/rest/v1/leads_instaladores?select=*&order=criado_em.desc', {
+      headers: {'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwYW5vbWRyaHZucXFkdXRkdGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMTU5MTgsImV4cCI6MjA5Mjc5MTkxOH0.7OIm6W_MmFdASO3T6JfNw9wtv5o03ZxOkXt-Fu7PVSI', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwYW5vbWRyaHZucXFkdXRkdGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMTU5MTgsImV4cCI6MjA5Mjc5MTkxOH0.7OIm6W_MmFdASO3T6JfNw9wtv5o03ZxOkXt-Fu7PVSI'}
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const leads = await r.json();
     document.getElementById('tc-leads').textContent = leads.filter(l => l.estado === 'novo').length || '';
     if (!leads.length) {
       document.getElementById('leads-body').innerHTML = '<div class="admin-loading">Ainda não há leads de instaladores.</div>';
@@ -606,7 +610,12 @@ async function carregarLeads() {
 
 async function atualizarEstadoLead(id, estado) {
   try {
-    await api('/leads/' + id, 'PATCH', { estado });
+    const r = await fetch('https://gpanomdrhvnqqdutdtfe.supabase.co/rest/v1/leads_instaladores?id=eq.' + id, {
+      method: 'PATCH',
+      headers: {'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwYW5vbWRyaHZucXFkdXRkdGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMTU5MTgsImV4cCI6MjA5Mjc5MTkxOH0.7OIm6W_MmFdASO3T6JfNw9wtv5o03ZxOkXt-Fu7PVSI', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwYW5vbWRyaHZucXFkdXRkdGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMTU5MTgsImV4cCI6MjA5Mjc5MTkxOH0.7OIm6W_MmFdASO3T6JfNw9wtv5o03ZxOkXt-Fu7PVSI', 'Content-Type': 'application/json'},
+      body: JSON.stringify({ estado })
+    });
+    if (!r.ok) throw new Error(await r.text());
     toast('Estado atualizado', 'ok');
     carregarLeads();
   } catch(e) { toast('Erro: ' + e.message, 'err'); }
