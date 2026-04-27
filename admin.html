@@ -95,8 +95,8 @@ a{text-decoration:none;color:inherit}
 .btn-sm:hover{border-color:var(--bd2);background:var(--sf)}
 
 /* LEADS TABELA */
-.leads-head{display:grid;grid-template-columns:1fr 130px 160px 120px 140px;gap:12px;padding:12px 20px;background:var(--sf);border-bottom:1px solid var(--bd);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu)}
-.lead-row{display:grid;grid-template-columns:1fr 130px 160px 120px 140px;gap:12px;padding:14px 20px;border-bottom:1px solid var(--bd);align-items:center;transition:background .15s}
+.leads-head{display:grid;grid-template-columns:1fr 130px 150px 90px 120px 130px;gap:12px;padding:12px 20px;background:var(--sf);border-bottom:1px solid var(--bd);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu)}
+.lead-row{display:grid;grid-template-columns:1fr 130px 150px 90px 120px 130px;gap:12px;padding:14px 20px;border-bottom:1px solid var(--bd);align-items:center;transition:background .15s}
 .lead-row:last-child{border-bottom:none}
 .lead-row:hover{background:var(--sf)}
 .lead-nome{font-size:13px;font-weight:700;color:var(--ink)}
@@ -150,7 +150,7 @@ a{text-decoration:none;color:inherit}
   .table-head,.table-row{grid-template-columns:48px 1fr 90px 100px}
   .table-head>:nth-child(3),.table-row>:nth-child(3),.table-head>:nth-child(5),.table-row>:nth-child(5){display:none}
   .leads-head,.lead-row{grid-template-columns:1fr 110px 100px}
-  .leads-head>:nth-child(3),.lead-row>:nth-child(3),.leads-head>:nth-child(5),.lead-row>:nth-child(5){display:none}
+  .leads-head>:nth-child(3),.lead-row>:nth-child(3),.leads-head>:nth-child(4),.lead-row>:nth-child(4),.leads-head>:nth-child(6),.lead-row>:nth-child(6){display:none}
   .form-grid{grid-template-columns:1fr}
   .admin-tabs{overflow-x:auto}
 }
@@ -221,7 +221,7 @@ a{text-decoration:none;color:inherit}
       </div>
       <div class="table-wrap">
         <div class="leads-head">
-          <div>Nome / Empresa</div><div>WhatsApp</div><div>Zona</div><div>Estado</div><div>Ações</div>
+          <div>Nome / Empresa</div><div>WhatsApp</div><div>Zona</div><div>Origem</div><div>Estado</div><div>Ações</div>
         </div>
         <div id="leads-body"><div class="admin-loading"><div class="spin"></div>A carregar...</div></div>
       </div>
@@ -611,6 +611,15 @@ async function carregarLeads() {
           <a href="https://wa.me/${l.whatsapp.replace(/\D/g,'')}" target="_blank" style="color:var(--gr);font-weight:700;font-size:13px">📱 ${l.whatsapp}</a>
         </div>
         <div style="font-size:13px;font-weight:600">${l.zona}</div>
+        <div>
+          <span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:100px;background:${
+            l.origem==='whatsapp'?'#F0FDF4':l.origem==='instagram'?'#FDF2F8':l.origem==='site'?'#EFF6FF':'#F7F7F5'
+          };color:${
+            l.origem==='whatsapp'?'#16A34A':l.origem==='instagram'?'#9333EA':l.origem==='site'?'#1D4ED8':'#6B6B6B'
+          };border:1px solid ${
+            l.origem==='whatsapp'?'#BBF7D0':l.origem==='instagram'?'#F5D0FE':l.origem==='site'?'#BFDBFE':'#E2E2E2'
+          }">${l.origem||'directo'}</span>
+        </div>
         <div>
           <select class="estado-select" onchange="atualizarEstadoLead(${l.id},this.value)">
             <option value="novo" ${l.estado==='novo'?'selected':''}>🔵 Novo</option>
