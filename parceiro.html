@@ -383,15 +383,18 @@ async function enviar() {
   try {
     await fetch(SUPA_URL + '/rest/v1/leads_instaladores', {
       method: 'POST',
-      headers: {
-        'apikey': ANON_KEY,
-        'Authorization': 'Bearer ' + ANON_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
+      headers: {'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
+      body: JSON.stringify({nome, whatsapp: wa, zona, origem: _origem, notas: [exp && 'Exp: ' + exp, tipo && 'Tipo: ' + tipo].filter(Boolean).join(' | ')})
+    });
+
+    // Entra directamente nos clientes como parceiro pendente
+    await fetch(SUPA_URL + '/rest/v1/clientes', {
+      method: 'POST',
+      headers: {'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
       body: JSON.stringify({
-        nome, whatsapp: wa, zona, origem: _origem,
-        notas: [exp && 'Exp: ' + exp, tipo && 'Tipo: ' + tipo].filter(Boolean).join(' | ')
+        nome, telefone: wa, tipo: 'parceiro', origem: 'site-' + _origem,
+        validado: false,
+        notas: 'Zona: ' + zona + (exp ? ' | Exp: ' + exp : '') + (tipo ? ' | Tipo: ' + tipo : '')
       })
     });
   } catch(e) { console.warn(e); }
