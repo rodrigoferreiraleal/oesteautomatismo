@@ -318,7 +318,7 @@ a{text-decoration:none;color:inherit}
   <div class="tab" onclick="tab('orcamentos',this)"><span class="tab-ic">📄</span> Orçamentos <span class="tab-count" id="tc-orc">0</span></div>
   <div class="tab" onclick="tab('vendas',this)"><span class="tab-ic">💼</span> Vendas <span class="tab-count" id="tc-ven">0</span></div>
   <div class="tab" onclick="tab('stock',this)"><span class="tab-ic">📦</span> Stock <span class="tab-count" id="tc-stk" style="background:var(--rd-bg);color:var(--rd)">0</span></div>
-  <div class="tab" onclick="tab('instaladores',this)"><span class="tab-ic">🔧</span> Instaladores <span class="tab-count" id="tc-inst" style="background:var(--rd-bg);color:var(--rd)">0</span></div>
+  <div class="tab" onclick="tab('instaladores',this)"><span class="tab-ic">🔧</span> Parceiros <span class="tab-count" id="tc-inst" style="background:var(--rd-bg);color:var(--rd)">0</span></div>
 </div>
 
 <div class="wrap">
@@ -350,9 +350,11 @@ a{text-decoration:none;color:inherit}
     <input class="search" placeholder="Nome, NIF, email..." oninput="filtrarClientes(this.value)"/>
     <select class="fsel" style="width:130px;padding:7px 10px" onchange="filtrarClientesTipo(this.value)">
       <option value="">Todos os tipos</option>
+      <option value="pendente">⏳ Pendentes</option>
       <option value="empresa">Empresa</option>
       <option value="particular">Particular</option>
-      <option value="instalador">Instalador</option>
+      <option value="instalador">Instalador parceiro</option>
+      <option value="parceiro">Parceiro site</option>
     </select>
     <button class="btn btn-wh btn-sm" onclick="carregarClientes()">↻</button>
     <button class="btn btn-or btn-sm" onclick="abrirCliente()">+ Novo cliente</button>
@@ -443,7 +445,10 @@ a{text-decoration:none;color:inherit}
     <div class="ficha-head">
       <div>
         <div class="ficha-nome" id="f-nome-title">—</div>
-        <div class="ficha-tipo" id="f-tipo-title">—</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+          <div class="ficha-tipo" id="f-tipo-title">—</div>
+          <a id="f-wa-link" href="#" target="_blank" class="btn btn-gr btn-sm" style="display:none;font-size:11px">💬 WhatsApp</a>
+        </div>
       </div>
       <button class="btn-x" onclick="fecharFicha()">×</button>
     </div>
@@ -772,15 +777,27 @@ async function apagarProd(id,nome){if(!confirm('Apagar "'+nome+'"?'))return;try{
 async function carregarClientes(){
   document.getElementById('tbody-cli').innerHTML='<div class="loading"><div class="spin"></div></div>';
   try{
-    _clis=await sGet('clientes','order=nome.asc');
+    _clis=await sGet('clientes','order=validado.asc,nome.asc');
     renderClientes(_clis);document.getElementById('tc-cli').textContent=_clis.length;
   }catch(e){toast('Erro clientes','err');}
 }
-async function _carregarClisSilent(){try{_clis=await sGet('clientes','order=nome.asc');popularSelCli('o-cli');popularSelCli('v-cli');}catch(e){}}
+async function _carregarClisSilent(){try{_clis=await sGet('clientes','order=validado.asc,nome.asc');popularSelCli('o-cli');popularSelCli('v-cli');}catch(e){}}
 
 let _cliTipoFilter='';
 function filtrarClientes(q){q=q.toLowerCase();let l=q?_clis.filter(c=>(c.nome||'').toLowerCase().includes(q)||(c.nif||'').includes(q)||(c.email||'').toLowerCase().includes(q)):_clis;if(_cliTipoFilter)l=l.filter(c=>c.tipo===_cliTipoFilter);renderClientes(l);}
-function filtrarClientesTipo(t){_cliTipoFilter=t;filtrarClientes(document.querySelector('#p-clientes .search').value);}
+function filtrarClientesTipo(t){
+  _cliTipoFilter=t;
+  filtrarClientes(document.querySelector('#p-clientes .search').value);
+}
+// Override filtrar para suportar filtro pendente
+const _filtrarCliOrig=filtrarClientes;
+filtrarClientes=function(q){
+  q=(q||'').toLowerCase();
+  let l=q?_clis.filter(c=>(c.nome||'').toLowerCase().includes(q)||(c.nif||'').includes(q)||(c.email||'').toLowerCase().includes(q)):_clis;
+  if(_cliTipoFilter==='pendente') l=l.filter(c=>!c.validado);
+  else if(_cliTipoFilter) l=l.filter(c=>c.tipo===_cliTipoFilter);
+  renderClientes(l);
+};
 
 function renderClientes(lista){
   const el=document.getElementById('tbody-cli');
@@ -788,7 +805,7 @@ function renderClientes(lista){
   el.innerHTML=lista.map(c=>`
   <div class="tbl-row col-clientes">
     <div>
-      <div class="tbl-name">${c.nome}</div>
+      <div class="tbl-name" style="cursor:pointer;color:var(--or);text-decoration:underline dotted" onclick="abrirFicha(${c.id})">${c.nome}</div>
       <div class="tbl-sub">${c.localidade||'—'} ${c.codigo_postal?'· '+c.codigo_postal:''}</div>
     </div>
     <div><span class="badge ${c.tipo==='empresa'?'b-bl':c.tipo==='instalador'?'b-gr':'b-mu'}">${c.tipo||'—'}</span></div>
@@ -798,7 +815,7 @@ function renderClientes(lista){
     </div>
     <div style="font-size:12px;color:var(--mu)">${c.nif||'—'}</div>
     <div class="row-acts">
-      <button class="btn btn-wh btn-sm" onclick="abrirFicha(${c.id})">👁 Ficha</button>
+      
       <button class="btn btn-wh btn-sm" onclick="editarCliente(${c.id})">✏️</button>
       <button class="btn btn-or btn-sm" onclick="novoOrcCli(${c.id})">📄</button>
       <button class="btn btn-rd btn-sm" onclick="apagarCli(${c.id},'${(c.nome||'').replace(/'/g,"\\'")}')">✕</button>
@@ -833,6 +850,12 @@ async function salvarCliente(){
     fecharOv('ov-cli');carregarClientes();_carregarClisSilent();toast(id?'Cliente actualizado!':'Cliente criado!','ok');
   }catch(e){toast('Erro: '+e.message,'err');}
 }
+async function validarCliente(id){
+  try{
+    await sPatch('clientes',id,{validado:true,tipo:'instalador'});
+    carregarClientes();toast('✅ Cliente validado como instalador!','ok');
+  }catch(e){toast('Erro: '+e.message,'err');}
+}
 async function apagarCli(id,nome){
   if(!confirm('Apagar cliente "'+nome+'"?\nOs orçamentos e histórico serão mantidos.'))return;
   try{await sDel('clientes',id);carregarClientes();toast('Apagado','ok');}catch(e){toast('Erro: '+e.message,'err');}
@@ -843,6 +866,9 @@ async function abrirFicha(id){
   const c=_clis.find(x=>x.id===id);if(!c)return;
   document.getElementById('f-nome-title').textContent=c.nome;
   document.getElementById('f-tipo-title').textContent=c.tipo||'particular';
+  const waLink=document.getElementById('f-wa-link');
+  if(c.telefone){waLink.href='https://wa.me/351'+c.telefone.replace(/\D/g,'');waLink.style.display='inline-flex';}
+  else waLink.style.display='none';
   document.getElementById('ficha-ov').classList.add('open');
   document.getElementById('ficha-content').innerHTML='<div class="loading"><div class="spin"></div></div>';
   try{
