@@ -752,7 +752,7 @@ function calcReset() {
 
 // PESQUISA DE PRODUTOS
 function pesquisarProdutos(q) {
-  q = q.toLowerCase().trim();
+  q = (q || '').toLowerCase().trim();
   const cards = document.querySelectorAll('.pc');
   let visiveis = 0;
   cards.forEach(card => {
@@ -763,16 +763,27 @@ function pesquisarProdutos(q) {
     card.style.display = match ? '' : 'none';
     if (match) visiveis++;
   });
-  // Mostrar todas as tabs se houver pesquisa activa
+  // Mostrar/ocultar mensagem de sem resultados
+  let semResultados = document.getElementById('sem-resultados-pesquisa');
+  if (!semResultados) {
+    semResultados = document.createElement('div');
+    semResultados.id = 'sem-resultados-pesquisa';
+    semResultados.style.cssText = 'text-align:center;padding:40px;color:var(--mu);font-size:14px;display:none';
+    semResultados.textContent = '🔍 Sem resultados para "' + q + '"';
+    const grid = document.querySelector('.pc-grid');
+    if (grid) grid.after(semResultados);
+  }
+  if (q && visiveis === 0) {
+    semResultados.textContent = '🔍 Sem resultados para "' + q + '"';
+    semResultados.style.display = 'block';
+  } else {
+    semResultados.style.display = 'none';
+  }
   if (q) {
     document.querySelectorAll('.tipo-tab-panel').forEach(p => p.style.display = 'block');
     document.querySelectorAll('.tab-b').forEach(b => b.classList.remove('on'));
   } else {
-    // Restaurar tab activa
-    const activeTab = document.querySelector('.tab-b.on');
-    if (!activeTab) {
-      const firstTab = document.querySelector('.tab-b');
-      if (firstTab) firstTab.click();
-    }
+    const firstTab = document.querySelector('.tab-b');
+    if (firstTab && !document.querySelector('.tab-b.on')) firstTab.click();
   }
 }
