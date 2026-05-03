@@ -680,6 +680,10 @@ let _prods=[],_clis=[],_orcs=[],_vens=[],_stk=[],_fus=[];
 let _orcItens=[],_venItens=[];
 let _cliPerfil='',_cliPipe='',_cliCidade='';
 
+
+// Sanitização XSS básica
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
 // ── AUTH ──
 async function login(){
   const now=Date.now();
@@ -767,7 +771,7 @@ async function carregarDash(){
     document.getElementById('dash-semcontacto').innerHTML=semC.length?semC.map(c=>{
       const d=diasSemContacto(c.ultimo_contacto);
       const cor=d===null||d>30?'var(--rd)':d>14?'var(--yw)':'var(--gr)';
-      return`<div class="alert-item"><div class="alert-dot" style="background:${cor}"></div><div style="flex:1"><div class="alert-nome" onclick="abrirFicha(${c.id})">${c.nome}</div><div class="alert-sub">${PERFIL_LABEL[c.perfil]||c.perfil} · ${c.cidade||'—'}</div></div><div class="alert-dias" style="background:${cor}15;color:${cor}">${fmtDias(d)}</div></div>`;
+      return`<div class="alert-item"><div class="alert-dot" style="background:${cor}"></div><div style="flex:1"><div class="alert-nome" onclick="abrirFicha(${c.id})">${esc(c.nome)}</div><div class="alert-sub">${PERFIL_LABEL[c.perfil]||c.perfil} · ${c.cidade||'—'}</div></div><div class="alert-dias" style="background:${cor}15;color:${cor}">${fmtDias(d)}</div></div>`;
     }).join(''):'<div class="empty-state"><div class="empty-ic">✅</div><div class="empty-t">Todos contactados</div></div>';
 
     // Follow-ups
@@ -847,7 +851,7 @@ function renderBoard(clis){
           const d=diasSemContacto(c.ultimo_contacto);
           const dcor=d===null||d>30?'var(--rd)':d>14?'var(--yw)':'var(--gr)';
           return`<div class="board-card" onclick="abrirFicha(${c.id})">
-            <div class="bc-name">${c.nome}</div>
+            <div class="bc-name">${esc(c.nome)}</div>
             <div class="bc-sub">${PERFIL_LABEL[c.perfil]||''} · ${c.cidade||'—'}</div>
             ${c.telefone?`<div class="bc-sub" style="margin-top:2px">📱 ${c.telefone}</div>`:''}
             <div class="bc-foot">
@@ -905,7 +909,7 @@ function renderClis(lista){
     const dcor=d===null||d>30?'var(--rd)':d>14?'var(--yw)':'var(--gr)';
     return`<div class="tbl-row" style="grid-template-columns:1fr 90px 100px 80px 90px 130px">
       <div>
-        <div class="tname" onclick="abrirFicha(${c.id})">${c.nome}</div>
+        <div class="tname" onclick="abrirFicha(${c.id})">${esc(c.nome)}</div>
         <div class="tsub" style="display:flex;align-items:center;gap:6px;margin-top:2px">
           ${CANAL_IC[c.canal]||'📞'} ${c.canal||'directo'}
           ${!c.validado?'<span class="badge b-yw">⏳ Pendente</span>':''}
@@ -1220,7 +1224,7 @@ function renderVens(lista){
     </div>
   </div>`).join(''):'<div class="empty-state"><div class="empty-ic">💼</div><div class="empty-t">Sem vendas</div></div>';
 }
-let _venItens2=[];
+
 function abrirVen(id=null,itensPreench=[],cliId=null){popularSels();document.getElementById('mt-ven').textContent=id?'Editar venda':'Nova venda';document.getElementById('v-id').value=id||'';document.getElementById('v-estado').value='confirmada';document.getElementById('v-notas').value='';if(cliId)document.getElementById('v-cli').value=cliId;_venItens=[...itensPreench];renderVenRows();abrirOv('ov-ven');}
 function editarVen(id){const v=_vens.find(x=>x.id===id);if(!v)return;abrirVen(id);document.getElementById('v-cli').value=v.cliente_id||'';document.getElementById('v-estado').value=v.estado||'confirmada';document.getElementById('v-notas').value=v.notas||'';sGet('venda_itens','venda_id=eq.'+id+'&order=id.asc').then(itens=>{_venItens=itens;renderVenRows();}).catch(()=>{});}
 function addVenRow(){const s=document.getElementById('v-prod-sel');const o=s.options[s.selectedIndex];if(!o.value)return;const pvp=parseFloat(o.dataset.pvp)||0;_venItens.push({produto_id:parseInt(o.value),nome_produto:o.dataset.nome,preco_pvp:pvp,desconto_pct:55,preco_final:+(pvp*.45).toFixed(2),quantidade:1});s.value='';renderVenRows();}
