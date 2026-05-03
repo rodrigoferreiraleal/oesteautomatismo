@@ -787,3 +787,452 @@ function pesquisarProdutos(q) {
     if (firstTab && !document.querySelector('.tab-b.on')) firstTab.click();
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// SIMULADOR DE MOTOR PPA — Dados técnicos verificados (PPA oficial)
+// ═══════════════════════════════════════════════════════════════════
+
+const CSIM = {tipo:null, material:null, uso:null, largura:3.0, altura:1.8};
+
+// Densidades reais (kg/m²) — fontes: engenharia metalúrgica
+const DENS = {ferro_gradil:25, ferro_chapa:45, aluminio:10, madeira:22};
+const DENS_NOME = {ferro_gradil:'Ferro c/ gradil', ferro_chapa:'Ferro chapa', aluminio:'Alumínio', madeira:'Madeira'};
+
+// Base técnica PPA verificada:
+// DZ Hub 550 Jetflex: 550kg max, 4s/3m, 40 ciclos/h, 1/4HP trifásico bivolt
+// DZ Stark 650 Jetflex: 650kg (Z14)/600kg (Z18), 5.5s/4s, 25 ciclos/h, 1/3HP trifásico bivolt
+// DZ Rio 800 Jetflex: 800kg, 3.5s/3m (Z18), 70 ciclos/h, 1/2HP trifásico bivolt
+// DZ Brutalle 2.0T: 2000kg, 70 ciclos/h, trifásico bivolt
+// Pivo Home Jetflex: 125kg/folha, 40 ciclos/h, residencial
+// SK Predial Standard: 250kg/folha, 60 ciclos/h, 230V, abertura 90° em 6s
+// BV Home Mono: 300kg, 30 ciclos/h, monofásico bivolt
+
+const MOTORES_SIM = {
+  correr:{
+    // Portões até 300kg residencial
+    leve_r:{
+      nome:'DZ Hub 550 Jetflex',
+      specs:['Até 550 kg','4s por 3m','40 ciclos/h','1/4 HP Trifásico','Bivolt 127/220V'],
+      why:'Motor ideal para portões leves em uso residencial. Ultra-rápido com abertura em 4 segundos para 3 metros. Central Triflex Facility integrada com controlo por app.',
+      acess:['Cremalheira PPA 1m','Fotocélula F32 Plus','Zap 2 botões','Sinaleira Lux'],
+      cor:'#1D4ED8'
+    },
+    // Portões 300-500kg residencial  
+    medio_r:{
+      nome:'DZ Stark 650 Jetflex',
+      specs:['Até 650 kg','4 a 5.5s por 3m','25 ciclos/h','1/3 HP Trifásico','Bivolt 127/220V'],
+      why:'Potência e velocidade para portões médios. Abertura entre 4 e 5.5 segundos. Sistema Jetflex com travamento automático de alta precisão. Recomendado para portões de ferro com gradil até 650 kg.',
+      acess:['Cremalheira PPA 1m','Fotocélula F32 Plus','Zap 4 botões','Sinaleira Lux'],
+      cor:'#E8580A'
+    },
+    // Portões 500-700kg residencial / 300-500kg intensivo
+    pesado_r:{
+      nome:'DZ Rio 800 Jetflex',
+      specs:['Até 800 kg','3.5s por 3m (Z18)','70 ciclos/h','1/2 HP Trifásico','Bivolt 127/220V'],
+      why:'O mais vendido da gama PPA. Abre 3 metros em apenas 3.5 segundos — um dos mais rápidos do mundo. 70 ciclos por hora. Indicado para portões pesados em residência ou uso semi-intensivo.',
+      acess:['Cremalheira PPA 1m','Fotocélula Reflexiva F-10R','Zap 4 botões','Sinaleira Lux','Contatto Wi-Fi'],
+      cor:'#E8580A'
+    },
+    // Portões >700kg ou intensivo médio/pesado
+    intensivo:{
+      nome:'DZ Rio 800 Jetflex',
+      specs:['Até 800 kg','3.5s por 3m','70 ciclos/h','1/2 HP Trifásico','Bivolt 127/220V'],
+      why:'Para uso intensivo até 800 kg com 70 ciclos por hora. Robusto, ultra-rápido e fiável para condomínios ou empresas com alto tráfego de veículos diário.',
+      acess:['Cremalheira PPA 1m','Fotocélula Reflexiva F-10R','Contatto Wi-Fi','Sinaleira Lux'],
+      cor:'#E8580A'
+    },
+    // Industrial / >800kg qualquer uso
+    industrial:{
+      nome:'DZ Brutalle 2.0T Jetflex',
+      specs:['Até 2000 kg','70 ciclos/h','Motor com ventoinha','Engrenagem alumínio','Bivolt 127/220V'],
+      why:'Solução industrial PPA para portões muito pesados. Carenagem em aço com pintura eletrostática, motorredutor com bico de engraxadeira e acesso externo ao PROG. Para portões acima de 800 kg.',
+      acess:['Fotocélula Reflexiva F-10R','Contatto Wi-Fi','Receptor 433MHz','Sinaleira Lux'],
+      cor:'#7C3AED'
+    }
+  },
+  batente:{
+    leve_r:{
+      nome:'Pivo Home Jetflex',
+      specs:['Até 125 kg/folha','40 ciclos/h','Trilho centralizado','1/4 HP','Residencial'],
+      why:'Automatismo para portões de batente residenciais leves. Trilho centralizado permite instalação em qualquer lado da folha. Silencioso, rápido e preciso. Ideal para folhas até 1.5m.',
+      acess:['Fotocélula F32 Plus','Zap 2 botões'],
+      cor:'#1D4ED8'
+    },
+    medio_r:{
+      nome:'SK Predial Jetflex Standard',
+      specs:['Até 250 kg/folha','60 ciclos/h','90° em 6s','IP54','230V / 50Hz'],
+      why:'Motor profissional para portões de batente até 250 kg por folha. Proteção IP54 para condições externas adversas (-20°C a +50°C). Ideal para portões de 2 folhas de tamanho médio.',
+      acess:['Fotocélula F32 Plus','Zap 4 botões','Sinaleira Lux'],
+      cor:'#E8580A'
+    },
+    pesado_r:{
+      nome:'SK Predial Jetflex Super',
+      specs:['Até 250 kg/folha','60 ciclos/h','90° em 11.5s','IP54 industrial','230V / 50Hz'],
+      why:'Versão Super do SK Predial, com trilho mais longo (3.5m) para portões com maiores dimensões. Máxima robustez para uso intensivo ou portões de folha grande.',
+      acess:['Fotocélula Reflexiva F-10R','Contatto Wi-Fi','Sinaleira Lux'],
+      cor:'#E8580A'
+    }
+  },
+  garagem:{
+    leve_r:{
+      nome:'BV Home Mono',
+      specs:['Até 300 kg','30 ciclos/h','13 a 16s','Monofásico bivolt','Residencial'],
+      why:'Motor de garagem basculante para uso doméstico. Trilho centralizado e destravamento manual em caso de falta de energia. Fechamento suave e silencioso que prolonga a vida útil.',
+      acess:['Fotocélula F32 Plus','Zap 2 botões'],
+      cor:'#1D4ED8'
+    },
+    pesado_r:{
+      nome:'BV Home Mono',
+      specs:['Até 300 kg','30 ciclos/h','13 a 16s','Monofásico bivolt','Residencial'],
+      why:'Para portas de garagem maiores dentro da capacidade residencial. Instalação versátil em qualquer lado da folha. Contacte-nos para portas acima de 300 kg.',
+      acess:['Fotocélula F32 Plus','Zap 4 botões','Sinaleira Lux'],
+      cor:'#1D4ED8'
+    },
+    intensivo:{
+      nome:'BV Home Mono',
+      specs:['Até 300 kg','30 ciclos/h','Bivolt','Residencial/Leve comercial',''],
+      why:'Para garagens com uso moderado. Para uso verdadeiramente intensivo (condomínio, garagem comercial) com mais de 30 ciclos/dia, é necessária uma análise técnica no local. Contacte-nos.',
+      acess:['Fotocélula F32 Plus','Contatto Wi-Fi'],
+      cor:'#D97706'
+    }
+  }
+};
+
+function calcGetMotor(){
+  const {tipo, material, uso} = CSIM;
+  const l = CSIM.largura, h = CSIM.altura;
+  const area = l * h;
+  const dens = DENS[material] || 25;
+  const pesoEst = Math.round(area * dens);
+  // Margem de segurança de 25% (boa prática de instalação)
+  const pesoComMargem = Math.round(pesoEst * 1.25);
+
+  if(!tipo || !material || !uso) return null;
+
+  const m = MOTORES_SIM[tipo];
+  if(!m) return null;
+
+  if(tipo==='correr'){
+    if(pesoComMargem > 800) return {...m.industrial, pesoEst, pesoComMargem};
+    if(uso==='intensivo') return {...m.intensivo, pesoEst, pesoComMargem};
+    if(pesoComMargem <= 375) return {...m.leve_r, pesoEst, pesoComMargem};
+    if(pesoComMargem <= 650) return {...m.medio_r, pesoEst, pesoComMargem};
+    return {...m.pesado_r, pesoEst, pesoComMargem};
+  }
+  if(tipo==='batente'){
+    // Batente: o peso é por folha (dividir por 2 se for 2 folhas)
+    // Assumir 2 folhas para portão com largura >= 2m
+    const pesoFolha = l >= 2 ? pesoEst/2 : pesoEst;
+    const pesoFolhaMargem = Math.round(pesoFolha * 1.25);
+    if(pesoFolhaMargem <= 125) return {...m.leve_r, pesoEst:Math.round(pesoFolha), pesoComMargem:pesoFolhaMargem, infoFolha:true};
+    if(pesoFolhaMargem <= 250) return {...m.medio_r, pesoEst:Math.round(pesoFolha), pesoComMargem:pesoFolhaMargem, infoFolha:true};
+    return {...m.pesado_r, pesoEst:Math.round(pesoFolha), pesoComMargem:pesoFolhaMargem, infoFolha:true};
+  }
+  if(tipo==='garagem'){
+    if(uso==='intensivo') return {...m.intensivo, pesoEst, pesoComMargem};
+    if(pesoEst > 200) return {...m.pesado_r, pesoEst, pesoComMargem};
+    return {...m.leve_r, pesoEst, pesoComMargem};
+  }
+  return null;
+}
+
+// ── Animação canvas ──
+let _calcAnimFrame = null;
+let _calcAnimProg = 0;
+let _calcAnimDir = 1;
+let _calcAnimRunning = false;
+
+function calcDesenharPortao(canvasId, tipo, material, largura, altura, progAbrir){
+  const cv = document.getElementById(canvasId);
+  if(!cv) return;
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0,0,W,H);
+
+  // Cores por material
+  const cores = {
+    ferro_gradil: {fill:'rgba(85,90,100,0.85)', grad:'rgba(100,105,115,0.5)'},
+    ferro_chapa:  {fill:'rgba(70,75,85,0.9)',   grad:'rgba(90,95,105,0.6)'},
+    aluminio:     {fill:'rgba(180,190,205,0.85)',grad:'rgba(200,210,220,0.5)'},
+    madeira:      {fill:'rgba(140,95,50,0.85)',  grad:'rgba(160,115,70,0.5)'},
+  };
+  const cor = cores[material] || cores.ferro_gradil;
+  const or  = 'rgba(232,88,10,';
+
+  // Escala: fittar portão na canvas com margem
+  const maxW = W * 0.72, maxH = H * 0.68;
+  const escala = Math.min(maxW/largura, maxH/altura);
+  const gW = largura * escala, gH = altura * escala;
+  const gX = (W - gW) / 2, gY = H * 0.12;
+
+  // Chão
+  ctx.strokeStyle = 'rgba(140,140,140,0.25)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(gX-16, gY+gH+6); ctx.lineTo(gX+gW+16, gY+gH+6); ctx.stroke();
+
+  // Pilares
+  ctx.fillStyle = 'rgba(110,115,125,0.5)';
+  ctx.fillRect(gX-7, gY-3, 6, gH+8);
+  ctx.fillRect(gX+gW+1, gY-3, 6, gH+8);
+
+  const p = (progAbrir !== undefined ? progAbrir : 0);
+
+  if(tipo === 'correr'){
+    const slide = gW * 0.62 * p;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(gX-2, gY-2, gW+4, gH+4); ctx.clip();
+    // Portão
+    ctx.fillStyle = cor.fill;
+    ctx.fillRect(gX-slide, gY, gW, gH);
+    // Grade
+    if(material !== 'ferro_chapa'){
+      ctx.strokeStyle = cor.grad; ctx.lineWidth = 0.8;
+      const cols = Math.max(3, Math.round(largura*2));
+      const rows = Math.max(2, Math.round(altura*1.5));
+      for(let i=1;i<cols;i++){ ctx.beginPath(); ctx.moveTo(gX-slide+gW/cols*i,gY); ctx.lineTo(gX-slide+gW/cols*i,gY+gH); ctx.stroke(); }
+      for(let i=1;i<rows;i++){ ctx.beginPath(); ctx.moveTo(gX-slide,gY+gH/rows*i); ctx.lineTo(gX-slide+gW,gY+gH/rows*i); ctx.stroke(); }
+    }
+    ctx.restore();
+    // Carril
+    ctx.strokeStyle = or+'0.35)'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(gX-16,gY+gH+3); ctx.lineTo(gX+gW+2,gY+gH+3); ctx.stroke();
+    // Motor
+    ctx.fillStyle = or+'0.9)';
+    const mx = gX+gW-18-slide, my = gY+gH/2-7;
+    ctx.beginPath();
+    if(ctx.roundRect) ctx.roundRect(mx,my,15,14,3); else ctx.rect(mx,my,15,14);
+    ctx.fill();
+
+  } else if(tipo === 'batente'){
+    // 2 folhas, abre para fora
+    const ang = p * Math.PI / 2.1;
+    // Folha esquerda
+    ctx.save();
+    ctx.translate(gX, gY + gH/2);
+    ctx.rotate(-ang);
+    ctx.fillStyle = cor.fill;
+    ctx.fillRect(0, -gH/2, gW/2-1, gH);
+    if(material !== 'ferro_chapa'){
+      ctx.strokeStyle = cor.grad; ctx.lineWidth = 0.7;
+      for(let i=1;i<3;i++){ ctx.beginPath(); ctx.moveTo(gW/2*i/3,gY-gH/2-gY); ctx.lineTo(gW/2*i/3,gH/2); ctx.stroke(); }
+    }
+    ctx.restore();
+    // Folha direita
+    ctx.save();
+    ctx.translate(gX+gW, gY + gH/2);
+    ctx.rotate(ang);
+    ctx.fillStyle = cor.fill;
+    ctx.fillRect(-(gW/2-1), -gH/2, gW/2-1, gH);
+    if(material !== 'ferro_chapa'){
+      ctx.strokeStyle = cor.grad; ctx.lineWidth = 0.7;
+      for(let i=1;i<3;i++){ ctx.beginPath(); ctx.moveTo(-gW/2+(gW/2)*i/3,-gH/2); ctx.lineTo(-gW/2+(gW/2)*i/3,gH/2); ctx.stroke(); }
+    }
+    ctx.restore();
+    // Motors
+    ctx.fillStyle = or+'0.9)';
+    const mSize = 13;
+    [[gX+3,gY+gH/2-mSize/2],[gX+gW-3-mSize,gY+gH/2-mSize/2]].forEach(([mx,my])=>{
+      ctx.beginPath();
+      if(ctx.roundRect) ctx.roundRect(mx,my,mSize,mSize,3); else ctx.rect(mx,my,mSize,mSize);
+      ctx.fill();
+    });
+
+  } else if(tipo === 'garagem'){
+    // Basculante — sobe
+    const rise = gH * 0.88 * p;
+    ctx.fillStyle = cor.fill;
+    ctx.fillRect(gX, gY+rise, gW, gH);
+    // Painéis horizontais
+    ctx.strokeStyle = cor.grad; ctx.lineWidth = 0.7;
+    const paineis = 4;
+    for(let i=1;i<paineis;i++){ ctx.beginPath(); ctx.moveTo(gX,gY+rise+gH/paineis*i); ctx.lineTo(gX+gW,gY+rise+gH/paineis*i); ctx.stroke(); }
+    // Motor no tecto
+    ctx.fillStyle = or+'0.9)';
+    const cx = gX+gW/2;
+    ctx.beginPath();
+    if(ctx.roundRect) ctx.roundRect(cx-8,gY+rise+3,16,10,3); else ctx.rect(cx-8,gY+rise+3,16,10);
+    ctx.fill();
+    // Trilho do tecto
+    ctx.strokeStyle = or+'0.3)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(gX+gW/2,gY); ctx.lineTo(gX+gW/2,gY+rise+3); ctx.stroke();
+  }
+
+  // Dimensões
+  const isDark = window.matchMedia('(prefers-color-scheme:dark)').matches;
+  ctx.fillStyle = isDark ? 'rgba(200,200,200,0.6)' : 'rgba(100,100,100,0.6)';
+  ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(largura.toFixed(1)+'m', gX+gW/2, gY+gH+18);
+  ctx.save(); ctx.translate(gX-14,gY+gH/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText(altura.toFixed(1)+'m', 0, 0); ctx.restore();
+}
+
+function calcAnimar(canvasId){
+  if(_calcAnimFrame){ cancelAnimationFrame(_calcAnimFrame); _calcAnimFrame=null; }
+  _calcAnimProg = 0; _calcAnimDir = 1;
+  function tick(){
+    calcDesenharPortao(canvasId, CSIM.tipo, CSIM.material, CSIM.largura, CSIM.altura, _calcAnimProg);
+    _calcAnimProg += _calcAnimDir * 0.014;
+    if(_calcAnimProg >= 1){ _calcAnimProg=1; _calcAnimDir=-1; }
+    else if(_calcAnimProg <= 0){
+      _calcAnimDir = 1;
+      // Pausa antes de recomeçar
+      setTimeout(()=>{ _calcAnimFrame = requestAnimationFrame(tick); }, 800);
+      return;
+    }
+    _calcAnimFrame = requestAnimationFrame(tick);
+  }
+  _calcAnimFrame = requestAnimationFrame(tick);
+}
+
+function calcStopAnim(){
+  if(_calcAnimFrame){ cancelAnimationFrame(_calcAnimFrame); _calcAnimFrame=null; }
+}
+
+// ── Preview nos cards do passo 1 ──
+function calcDesenharPreviews(){
+  [
+    {id:'ct-cv-correr',   tipo:'correr'},
+    {id:'ct-cv-batente',  tipo:'batente'},
+    {id:'ct-cv-garagem',  tipo:'garagem'},
+  ].forEach(({id, tipo})=>{
+    const cv = document.getElementById(id);
+    if(!cv) return;
+    calcDesenharPortao(id, tipo, 'ferro_gradil', 3, 1.8, 0.4);
+  });
+}
+
+// ── Navegação ──
+function calcIrPasso(n){
+  ['cp1','cp2','cp3','cp4'].forEach((id,i)=>{
+    document.getElementById(id)?.classList.toggle('on', i===n-1);
+  });
+  const progs = {1:8, 2:38, 3:70, 4:100};
+  const fill = document.getElementById('cpf');
+  if(fill) fill.style.width = (progs[n]||8)+'%';
+
+  for(let i=1;i<=4;i++){
+    const dot = document.getElementById('csd'+i);
+    if(!dot) continue;
+    if(i < n){ dot.className='csd done'; dot.querySelector('span').textContent='✓'; }
+    else if(i===n){ dot.className='csd on'; dot.querySelector('span').textContent=i<4?String(i):'✓'; }
+    else{ dot.className='csd'; dot.querySelector('span').textContent=i<4?String(i):'✓'; }
+    const line = document.getElementById('csl'+i);
+    if(line) line.className='csd-line'+(i<n?' done':'');
+  }
+
+  if(n===2){
+    setTimeout(()=>{
+      calcDesenharPortao('calc-anim', CSIM.tipo, CSIM.material||'ferro_gradil', CSIM.largura, CSIM.altura, 0);
+    },50);
+  }
+  if(n===3) calcStopAnim();
+  if(n===4){
+    calcMostrarResultado();
+    setTimeout(()=>calcAnimar('calc-anim-res'), 300);
+  }
+}
+
+function calcTipo(tipo, btn){
+  CSIM.tipo = tipo;
+  document.querySelectorAll('.ct-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  setTimeout(()=>calcIrPasso(2), 220);
+}
+
+function calcMaterial(mat, btn){
+  CSIM.material = mat;
+  document.querySelectorAll('.cm-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  calcAtualizaDims();
+  const next = document.getElementById('calc-next2');
+  if(next){ next.disabled=false; }
+  // Animar portão
+  calcAnimar('calc-anim');
+}
+
+function calcAtualizaDims(){
+  const l = parseFloat(document.getElementById('sl-larg')?.value||3);
+  const h = parseFloat(document.getElementById('sl-alt')?.value||1.8);
+  CSIM.largura = l; CSIM.altura = h;
+  const lv = document.getElementById('sl-larg-val');
+  const hv = document.getElementById('sl-alt-val');
+  if(lv) lv.textContent = l.toFixed(1).replace('.',',')+' m';
+  if(hv) hv.textContent = h.toFixed(1).replace('.',',')+' m';
+  if(CSIM.material){
+    const p = Math.round(l * h * (DENS[CSIM.material]||25));
+    const chip = document.getElementById('cpc-val');
+    if(chip) chip.textContent = p + ' kg (est.)';
+  }
+  calcDesenharPortao('calc-anim', CSIM.tipo, CSIM.material||'ferro_gradil', l, h, 0.3);
+}
+
+function calcUso(uso, btn){
+  CSIM.uso = uso;
+  document.querySelectorAll('.cu-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  setTimeout(()=>calcIrPasso(4), 220);
+}
+
+function calcMostrarResultado(){
+  const motor = calcGetMotor();
+  if(!motor){ calcReset(); return; }
+
+  const tipoNome = {correr:'Portão de correr', batente:'Portão de batente', garagem:'Porta de garagem'};
+
+  document.getElementById('cr-motor').textContent = motor.nome;
+  document.getElementById('cr-badge').textContent = '✅ Motor recomendado';
+
+  // Specs chips
+  const specsEl = document.getElementById('cr-specs');
+  if(specsEl) specsEl.innerHTML = motor.specs.filter(Boolean).map(s=>`<span class="crs-chip">${s}</span>`).join('');
+
+  document.getElementById('cr-why').textContent = motor.why;
+
+  // Acessórios
+  const acessEl = document.getElementById('cr-acess');
+  if(acessEl && motor.acess?.length){
+    acessEl.innerHTML = '<div class="calc-res-acess-t">Acessórios recomendados</div><div class="calc-res-acess-tags">'+
+      motor.acess.map(a=>`<span class="cra-tag">${a}</span>`).join('')+'</div>';
+  }
+
+  // Resumo
+  document.getElementById('crr-tipo').textContent = tipoNome[CSIM.tipo]||CSIM.tipo;
+  document.getElementById('crr-dims').textContent = CSIM.largura.toFixed(1)+'m × '+CSIM.altura.toFixed(1)+'m';
+  document.getElementById('crr-mat').textContent = DENS_NOME[CSIM.material]||CSIM.material;
+  const pesoTxt = motor.infoFolha
+    ? motor.pesoEst+' kg/folha (est.)'
+    : motor.pesoEst+' kg (est.)';
+  document.getElementById('crr-peso').textContent = pesoTxt;
+  document.getElementById('crr-uso').textContent = CSIM.uso==='residencial'?'Residencial':'Intensivo';
+
+  // WhatsApp pré-preenchido
+  const msg = `Olá! Usei o simulador do site Oeste Automatismos e preciso de informação sobre o motor ${motor.nome}.`
+    +`\n\nPortão: ${tipoNome[CSIM.tipo]||CSIM.tipo}`
+    +`\nDimensões: ${CSIM.largura.toFixed(1)}m × ${CSIM.altura.toFixed(1)}m`
+    +`\nMaterial: ${DENS_NOME[CSIM.material]||CSIM.material}`
+    +`\nPeso estimado: ${motor.pesoEst} kg`
+    +`\nUso: ${CSIM.uso==='residencial'?'Residencial':'Intensivo'}`
+    +`\n\nPosso pedir orçamento?`;
+  const wa = document.getElementById('cr-wa');
+  if(wa) wa.href = 'https://wa.me/351926961099?text='+encodeURIComponent(msg);
+}
+
+function calcReset(){
+  CSIM.tipo=null; CSIM.material=null; CSIM.uso=null; CSIM.largura=3; CSIM.altura=1.8;
+  calcStopAnim();
+  const sl = document.getElementById('sl-larg'); if(sl) sl.value=3;
+  const sa = document.getElementById('sl-alt'); if(sa) sa.value=1.8;
+  const next = document.getElementById('calc-next2'); if(next) next.disabled=true;
+  const chip = document.getElementById('cpc-val'); if(chip) chip.textContent='—';
+  document.querySelectorAll('.ct-btn,.cm-btn,.cu-btn').forEach(b=>b.classList.remove('sel'));
+  calcIrPasso(1);
+  setTimeout(calcDesenharPreviews, 100);
+}
+
+// Inicializar previews quando a secção estiver visível
+document.addEventListener('DOMContentLoaded', ()=>{
+  setTimeout(calcDesenharPreviews, 500);
+});
+if(document.readyState==='complete'||document.readyState==='interactive'){
+  setTimeout(calcDesenharPreviews, 600);
+}
