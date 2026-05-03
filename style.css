@@ -14,7 +14,7 @@ html{scroll-behavior:smooth}
   --sh2:0 4px 16px rgba(0,0,0,.09),0 16px 40px rgba(0,0,0,.10);
   --ease:.22s cubic-bezier(.4,0,.2,1);
 }
-body{background:var(--wh);font-family:'Plus Jakarta Sans',sans-serif;background:var(--wh);color:var(--tx);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body{background:var(--wh);font-family:'Plus Jakarta Sans',sans-serif;color:var(--tx);-webkit-font-smoothing:antialiased;overflow-x:hidden}
 a{text-decoration:none;color:inherit}
 .wrap{max-width:1200px;margin:0 auto;padding:0 24px}
 
