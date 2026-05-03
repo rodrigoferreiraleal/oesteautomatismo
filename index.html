@@ -235,72 +235,143 @@
 <section class="sec sec-calc" id="calculadora">
 <div class="wrap">
   <div class="calc-header">
-    <div class="calc-ey">Ajuda para escolher</div>
-    <h2 class="calc-h">Qual motor é o certo para si?</h2>
-    <p class="calc-sub">Responda a 3 perguntas e recebe a recomendação do motor ideal para o seu portão.</p>
+    <div class="calc-ey">Simulador PPA</div>
+    <h2 class="calc-h">Qual motor é o certo<br>para o seu portão?</h2>
+    <p class="calc-sub">3 perguntas. Resultado instantâneo. Dados técnicos reais PPA.</p>
   </div>
-  <div class="calc-card" id="calc-card">
-    <!-- Step 1 -->
-    <div class="calc-step on" id="cs-1">
-      <div class="calc-step-n">1 / 3</div>
+
+  <div class="calc-shell" id="calc-shell">
+    <!-- PROGRESS -->
+    <div class="calc-prog-wrap">
+      <div class="calc-prog-bar"><div class="calc-prog-fill" id="cpf"></div></div>
+      <div class="calc-steps-dots">
+        <div class="csd on" id="csd1"><span>1</span><div class="csd-lbl">Tipo</div></div>
+        <div class="csd-line" id="csl1"></div>
+        <div class="csd" id="csd2"><span>2</span><div class="csd-lbl">Medidas</div></div>
+        <div class="csd-line" id="csl2"></div>
+        <div class="csd" id="csd3"><span>3</span><div class="csd-lbl">Uso</div></div>
+        <div class="csd-line" id="csl3"></div>
+        <div class="csd" id="csd4"><span>✓</span><div class="csd-lbl">Resultado</div></div>
+      </div>
+    </div>
+
+    <!-- PASSO 1 — TIPO -->
+    <div class="cpanel on" id="cp1">
       <div class="calc-q">Que tipo de portão tem?</div>
-      <div class="calc-opts">
-        <button class="calc-opt" onclick="calcEscolha('tipo','correr',this)">
-          <span class="calc-opt-ic">↔️</span>
-          <span class="calc-opt-t">Portão de correr</span>
-          <span class="calc-opt-d">Desliza lateralmente</span>
+      <div class="calc-tipos">
+        <button class="ct-btn" onclick="calcTipo('correr',this)" data-tipo="correr">
+          <canvas class="ct-canvas" id="ct-cv-correr" width="120" height="80"></canvas>
+          <div class="ct-nome">Portão de correr</div>
+          <div class="ct-desc">Desliza ao longo de um carril</div>
         </button>
-        <button class="calc-opt" onclick="calcEscolha('tipo','batente',this)">
-          <span class="calc-opt-ic">🚪</span>
-          <span class="calc-opt-t">Portão de batente</span>
-          <span class="calc-opt-d">Abre para dentro/fora</span>
+        <button class="ct-btn" onclick="calcTipo('batente',this)" data-tipo="batente">
+          <canvas class="ct-canvas" id="ct-cv-batente" width="120" height="80"></canvas>
+          <div class="ct-nome">Portão de batente</div>
+          <div class="ct-desc">Abre para dentro ou fora (1 ou 2 folhas)</div>
         </button>
-        <button class="calc-opt" onclick="calcEscolha('tipo','garagem',this)">
-          <span class="calc-opt-ic">🏠</span>
-          <span class="calc-opt-t">Porta de garagem</span>
-          <span class="calc-opt-d">Basculante ou seccional</span>
-        </button>
-      </div>
-    </div>
-    <!-- Step 2 -->
-    <div class="calc-step" id="cs-2">
-      <div class="calc-step-n">2 / 3</div>
-      <div class="calc-q" id="calc-q2">Qual o peso aproximado do portão?</div>
-      <div class="calc-opts" id="calc-opts2">
-        <!-- preenchido por JS -->
-      </div>
-    </div>
-    <!-- Step 3 -->
-    <div class="calc-step" id="cs-3">
-      <div class="calc-step-n">3 / 3</div>
-      <div class="calc-q">Qual o uso?</div>
-      <div class="calc-opts">
-        <button class="calc-opt" onclick="calcEscolha('uso','residencial',this)">
-          <span class="calc-opt-ic">🏡</span>
-          <span class="calc-opt-t">Residencial</span>
-          <span class="calc-opt-d">Casa particular, uso diário normal</span>
-        </button>
-        <button class="calc-opt" onclick="calcEscolha('uso','intensivo',this)">
-          <span class="calc-opt-ic">🏢</span>
-          <span class="calc-opt-t">Intensivo / Comercial</span>
-          <span class="calc-opt-d">Empresa, condomínio, muitas aberturas por dia</span>
+        <button class="ct-btn" onclick="calcTipo('garagem',this)" data-tipo="garagem">
+          <canvas class="ct-canvas" id="ct-cv-garagem" width="120" height="80"></canvas>
+          <div class="ct-nome">Porta de garagem</div>
+          <div class="ct-desc">Basculante ou seccional</div>
         </button>
       </div>
     </div>
-    <!-- Resultado -->
-    <div class="calc-step" id="cs-result">
-      <div class="calc-result-ic">✅</div>
-      <div class="calc-result-t" id="calc-result-t">Motor recomendado</div>
-      <div class="calc-result-prod" id="calc-result-prod"></div>
-      <div class="calc-result-why" id="calc-result-why"></div>
-      <div class="calc-result-acts">
-        <a id="calc-wa-btn" href="#" target="_blank" class="btn-calc-wa">💬 Pedir informação</a>
-        <button onclick="calcReset()" class="btn-calc-reset">↩ Recomeçar</button>
+
+    <!-- PASSO 2 — MEDIDAS + MATERIAL -->
+    <div class="cpanel" id="cp2">
+      <div class="calc-q" id="calc-q2">Dimensões e material</div>
+      <div class="calc-step2-grid">
+        <div class="calc-visual-col">
+          <canvas id="calc-anim" width="300" height="200" class="calc-anim-canvas"></canvas>
+          <div class="calc-peso-chip" id="calc-peso-chip">
+            <span class="cpc-label">Peso estimado</span>
+            <span class="cpc-val" id="cpc-val">—</span>
+          </div>
+        </div>
+        <div class="calc-controls-col">
+          <div class="calc-slider-group">
+            <div class="calc-sl-head"><span class="calc-sl-label">Largura</span><span class="calc-sl-val" id="sl-larg-val">3,0 m</span></div>
+            <input type="range" class="calc-sl" id="sl-larg" min="1" max="6" step="0.5" value="3" oninput="calcAtualizaDims()">
+            <div class="calc-sl-marks"><span>1m</span><span>3m</span><span>6m</span></div>
+          </div>
+          <div class="calc-slider-group">
+            <div class="calc-sl-head"><span class="calc-sl-label">Altura</span><span class="calc-sl-val" id="sl-alt-val">1,8 m</span></div>
+            <input type="range" class="calc-sl" id="sl-alt" min="0.8" max="2.5" step="0.1" value="1.8" oninput="calcAtualizaDims()">
+            <div class="calc-sl-marks"><span>0.8m</span><span>1.5m</span><span>2.5m</span></div>
+          </div>
+          <div class="calc-material-t">Material do portão</div>
+          <div class="calc-mats">
+            <button class="cm-btn" onclick="calcMaterial('ferro_gradil',this)">
+              <div class="cm-ic">⊞</div><div class="cm-nome">Ferro c/ gradil</div><div class="cm-kg">~25 kg/m²</div>
+            </button>
+            <button class="cm-btn" onclick="calcMaterial('ferro_chapa',this)">
+              <div class="cm-ic">▬</div><div class="cm-nome">Ferro chapa</div><div class="cm-kg">~45 kg/m²</div>
+            </button>
+            <button class="cm-btn" onclick="calcMaterial('aluminio',this)">
+              <div class="cm-ic">◻</div><div class="cm-nome">Alumínio</div><div class="cm-kg">~10 kg/m²</div>
+            </button>
+            <button class="cm-btn" onclick="calcMaterial('madeira',this)">
+              <div class="cm-ic">♦</div><div class="cm-nome">Madeira</div><div class="cm-kg">~22 kg/m²</div>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="calc-nav-row">
+        <button class="calc-back" onclick="calcIrPasso(1)">← Voltar</button>
+        <button class="calc-next" id="calc-next2" onclick="calcIrPasso(3)" disabled>Continuar →</button>
       </div>
     </div>
-    <!-- Progress -->
-    <div class="calc-progress" id="calc-progress">
-      <div class="calc-prog-fill" id="calc-prog-fill"></div>
+
+    <!-- PASSO 3 — USO -->
+    <div class="cpanel" id="cp3">
+      <div class="calc-q">Qual o uso diário?</div>
+      <div class="calc-usos">
+        <button class="cu-btn" onclick="calcUso('residencial',this)">
+          <div class="cu-ic">🏡</div>
+          <div class="cu-nome">Residencial</div>
+          <div class="cu-desc">Casa particular · Até 30 aberturas/dia<br>Abertura ocasional de veículos</div>
+          <div class="cu-chip">Uso normal</div>
+        </button>
+        <button class="cu-btn" onclick="calcUso('intensivo',this)">
+          <div class="cu-ic">🏢</div>
+          <div class="cu-nome">Intensivo</div>
+          <div class="cu-desc">Empresa, condomínio ou garagem comercial<br>Mais de 30 aberturas por dia</div>
+          <div class="cu-chip">Alto tráfego</div>
+        </button>
+      </div>
+      <div class="calc-nav-row">
+        <button class="calc-back" onclick="calcIrPasso(2)">← Voltar</button>
+      </div>
+    </div>
+
+    <!-- RESULTADO -->
+    <div class="cpanel" id="cp4">
+      <div class="calc-result-wrap">
+        <div class="calc-result-left">
+          <div class="calc-res-badge" id="cr-badge">Motor recomendado</div>
+          <div class="calc-res-motor" id="cr-motor">—</div>
+          <div class="calc-res-specs" id="cr-specs"></div>
+          <div class="calc-res-why" id="cr-why">—</div>
+          <div class="calc-res-acess" id="cr-acess"></div>
+          <div class="calc-res-aviso">
+            ⚠️ Estimativa baseada nas dimensões indicadas. O peso real pode variar com o tipo de perfil, preenchimento e acabamento. Um instalador verificará no local.
+          </div>
+          <div class="calc-res-acts">
+            <a id="cr-wa" href="#" target="_blank" rel="noopener" class="btn-cr-wa">💬 Pedir orçamento pelo WhatsApp</a>
+            <button onclick="calcReset()" class="btn-cr-reset">↩ Nova consulta</button>
+          </div>
+        </div>
+        <div class="calc-result-right">
+          <canvas id="calc-anim-res" width="260" height="200" class="calc-anim-canvas"></canvas>
+          <div class="calc-res-resumo">
+            <div class="crr-item"><span class="crr-k">Tipo</span><span class="crr-v" id="crr-tipo">—</span></div>
+            <div class="crr-item"><span class="crr-k">Dimensões</span><span class="crr-v" id="crr-dims">—</span></div>
+            <div class="crr-item"><span class="crr-k">Material</span><span class="crr-v" id="crr-mat">—</span></div>
+            <div class="crr-item"><span class="crr-k">Peso estimado</span><span class="crr-v" id="crr-peso">—</span></div>
+            <div class="crr-item"><span class="crr-k">Uso</span><span class="crr-v" id="crr-uso">—</span></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
