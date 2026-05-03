@@ -1,4 +1,3 @@
-
 /* ── TABS ── */
 function showTab(id,btn){
   // esconder filtro se não for correr
@@ -642,4 +641,138 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', carregarProdutos);
 } else {
   carregarProdutos();
+}
+
+
+
+// ═══ CALCULADORA DE MOTOR ═══
+const CALC_STATE = {tipo: null, peso: null, uso: null};
+
+// Dados técnicos reais dos motores PPA
+const CALC_MOTORES = {
+  correr: {
+    leve_residencial:    {nome:'DZ Hub 550 Jetflex', desc:'Motor de correr ideal para portões até 300kg em uso residencial. Silencioso, compacto e com controlo via app.', peso:'até 300 kg'},
+    leve_intensivo:      {nome:'DZ Cube 550 Mono',   desc:'Versão robusta para uso intensivo até 550kg. Ideal para escritórios e pequenos comércios com bastante movimento.', peso:'até 550 kg'},
+    medio_residencial:   {nome:'DZ Stark 650 Jetflex',desc:'Potência e velocidade para portões médios. Sistema Jetflex garante abertura ultra-rápida e travamento automático.', peso:'até 650 kg'},
+    medio_intensivo:     {nome:'DZ Rio 800 Jetflex',  desc:'O mais vendido da linha PPA. Suporta até 800kg com velocidade de 3,5s para 3m. Recomendado para uso intensivo.', peso:'até 800 kg'},
+    pesado_residencial:  {nome:'DZ Rio 800 Jetflex',  desc:'Fiável e robusto para portões pesados em uso residencial. O melhor custo-benefício da gama PPA.', peso:'até 800 kg'},
+    pesado_intensivo:    {nome:'DZ Brutalle 2.0',     desc:'A solução industrial PPA para portões pesados em ambientes de alta exigência. Até 1000kg com durabilidade máxima.', peso:'até 1000 kg'},
+  },
+  batente: {
+    leve_residencial:    {nome:'Pivo Home Braço Standard', desc:'Automatismo de batente para uso doméstico. Instalação simples, silenciosa e fiável para portões até 250kg por folha.', peso:'até 250 kg/folha'},
+    leve_intensivo:      {nome:'SK Predial Jetflex Standard', desc:'Versão profissional para condomínios e uso intensivo. Motor robusto com sistema de segurança integrado.', peso:'até 300 kg/folha'},
+    medio_residencial:   {nome:'SK Predial Braço Super', desc:'Braço de alta resistência para portões de batente médios. Velocidade superior e travamento automático reforçado.', peso:'até 400 kg/folha'},
+    medio_intensivo:     {nome:'Pivo Condomínio Jetflex', desc:'Desenhado para acesso em condomínios e instalações comerciais com fluxo constante de veículos.', peso:'até 500 kg/folha'},
+    pesado_residencial:  {nome:'Pivo Condomínio Jetflex', desc:'O automatismo de batente mais robusto da gama PPA para uso residencial exigente.', peso:'até 500 kg/folha'},
+    pesado_intensivo:    {nome:'Pivo Condomínio Jetflex', desc:'Ideal para portões pesados em locais comerciais ou industriais com uso intensivo diário.', peso:'até 500 kg/folha'},
+  },
+  garagem: {
+    leve_residencial:    {nome:'BH Urus 24v 800N', desc:'Motor de garagem silencioso e potente para uso doméstico. Sistema de destravamento manual em caso de falha eléctrica.', peso:'até 800N de força'},
+    leve_intensivo:      {nome:'BH Urus 24v 800N', desc:'Fiabilidade comprovada para uso intensivo em garagens comerciais ou de condomínio. Força de 800N garante abertura rápida.', peso:'até 800N de força'},
+    medio_residencial:   {nome:'BH Urus 24v 800N', desc:'O motor de garagem PPA cobre a maioria das portas residenciais e comerciais com excelente desempenho.', peso:'até 800N de força'},
+    medio_intensivo:     {nome:'BH Urus 24v 800N', desc:'Para garagens com uso frequente — robusto e silencioso com garantia PPA oficial.', peso:'até 800N de força'},
+    pesado_residencial:  {nome:'BH Urus 24v 800N', desc:'Para portas de garagem de grandes dimensões. Motor potente com sistema de segurança integrado.', peso:'até 800N de força'},
+    pesado_intensivo:    {nome:'BH Urus 24v 800N', desc:'Solução robusta para portões de garagem industriais e de grande utilização. Contacte-nos para soluções especiais.', peso:'até 800N de força'},
+  }
+};
+
+const CALC_PESOS = {
+  correr: [
+    {ic:'🏠', t:'Leve — até 300 kg', d:'Portão de ferro simples ou alumínio', v:'leve'},
+    {ic:'⚖️', t:'Médio — 300 a 600 kg', d:'Portão de ferro reforçado', v:'medio'},
+    {ic:'🏗️', t:'Pesado — acima de 600 kg', d:'Portão industrial ou muito grande', v:'pesado'},
+  ],
+  batente: [
+    {ic:'🏠', t:'Leve — até 200 kg/folha', d:'Portão simples, 1 folha', v:'leve'},
+    {ic:'⚖️', t:'Médio — 200 a 400 kg/folha', d:'Portão de ferro, 2 folhas', v:'medio'},
+    {ic:'🏗️', t:'Pesado — acima de 400 kg', d:'Portão grande ou reforçado', v:'pesado'},
+  ],
+  garagem: [
+    {ic:'🚗', t:'Pequena — uso normal', d:'Garagem 1 carro, porta standard', v:'leve'},
+    {ic:'🚙', t:'Média — porta grande', d:'Garagem 2 carros ou porta alta', v:'medio'},
+    {ic:'🚛', t:'Grande / Industrial', d:'Porta muito pesada ou alta utilização', v:'pesado'},
+  ],
+};
+
+function calcEscolha(campo, valor, btn) {
+  CALC_STATE[campo] = valor;
+  // Highlight da opção
+  btn.closest('.calc-opts').querySelectorAll('.calc-opt').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+
+  setTimeout(() => {
+    if (campo === 'tipo') {
+      // Mostrar step 2 com opções de peso
+      const pesosOpts = CALC_PESOS[valor];
+      document.getElementById('calc-opts2').innerHTML = pesosOpts.map(p=>
+        `<button class="calc-opt" onclick="calcEscolha('peso','${p.v}',this)">
+          <span class="calc-opt-ic">${p.ic}</span>
+          <span class="calc-opt-t">${p.t}</span>
+          <span class="calc-opt-d">${p.d}</span>
+        </button>`
+      ).join('');
+      calcMostrarStep(2);
+    } else if (campo === 'peso') {
+      calcMostrarStep(3);
+    } else if (campo === 'uso') {
+      calcMostrarResultado();
+    }
+  }, 200);
+}
+
+function calcMostrarStep(n) {
+  document.querySelectorAll('.calc-step').forEach(s=>s.classList.remove('on'));
+  document.getElementById('cs-'+n).classList.add('on');
+  const pct = {1:33, 2:66, 3:90, result:100}[n === 'result' ? 'result' : n];
+  document.getElementById('calc-prog-fill').style.width = (pct||33)+'%';
+}
+
+function calcMostrarResultado() {
+  const {tipo, peso, uso} = CALC_STATE;
+  const key = `${peso}_${uso}`;
+  const motor = CALC_MOTORES[tipo]?.[key];
+  if (!motor) { calcReset(); return; }
+
+  document.getElementById('calc-result-prod').textContent = motor.nome;
+  document.getElementById('calc-result-why').textContent = motor.desc;
+  document.getElementById('calc-result-t').textContent = '✅ Motor recomendado para si';
+
+  const msg = `Olá! Usei a calculadora e preciso de informação sobre o motor ${motor.nome}. Portão: ${tipo}, ${motor.peso}, uso ${uso}.`;
+  document.getElementById('calc-wa-btn').href = 'https://wa.me/351926961099?text='+encodeURIComponent(msg);
+
+  calcMostrarStep('result');
+  document.getElementById('calc-prog-fill').style.width = '100%';
+}
+
+function calcReset() {
+  CALC_STATE.tipo = CALC_STATE.peso = CALC_STATE.uso = null;
+  document.querySelectorAll('.calc-opt').forEach(b=>b.classList.remove('sel'));
+  calcMostrarStep(1);
+}
+
+// PESQUISA DE PRODUTOS
+function pesquisarProdutos(q) {
+  q = q.toLowerCase().trim();
+  const cards = document.querySelectorAll('.pc');
+  let visiveis = 0;
+  cards.forEach(card => {
+    const nome = (card.querySelector('.pc-name')?.textContent || '').toLowerCase();
+    const tags = (card.dataset.tags || '').toLowerCase();
+    const tipo = (card.dataset.tipo || '').toLowerCase();
+    const match = !q || nome.includes(q) || tags.includes(q) || tipo.includes(q);
+    card.style.display = match ? '' : 'none';
+    if (match) visiveis++;
+  });
+  // Mostrar todas as tabs se houver pesquisa activa
+  if (q) {
+    document.querySelectorAll('.tipo-tab-panel').forEach(p => p.style.display = 'block');
+    document.querySelectorAll('.tab-b').forEach(b => b.classList.remove('on'));
+  } else {
+    // Restaurar tab activa
+    const activeTab = document.querySelector('.tab-b.on');
+    if (!activeTab) {
+      const firstTab = document.querySelector('.tab-b');
+      if (firstTab) firstTab.click();
+    }
+  }
 }
