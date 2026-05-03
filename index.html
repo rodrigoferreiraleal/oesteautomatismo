@@ -122,7 +122,10 @@
 </div>
 
     <div class="pane on" id="tp-correr">
-      <div class="filtro-bar">
+      <div class="prod-search-wrap">
+  <input class="prod-search" type="text" placeholder="🔍 Pesquisar produto..." id="prod-search" oninput="pesquisarProdutos(this.value)" autocomplete="off"/>
+</div>
+<div class="filtro-bar">
 <span class="filtro-lbl">Filtrar:</span>
 <select class="filtro-sel" id="f-peso" onchange="aplicarFiltro()">
 <option value="">Qualquer peso</option>
@@ -173,6 +176,135 @@
   </div>
 </section>
 
+
+<!-- ═══ SECÇÃO: QUEM SOMOS ═══ -->
+<section class="sec sec-quem" id="quem-somos">
+<div class="wrap">
+  <div class="qs-grid">
+    <div class="qs-left">
+      <div class="qs-ey">Quem somos</div>
+      <h2 class="qs-h">Distribuidor autorizado PPA<br/>no <span class="qs-em">Oeste de Portugal.</span></h2>
+      <p class="qs-p">Somos a referência local em automatismos PPA para a região Oeste. Trabalhamos directamente com instaladores, serralheiros e clientes finais — com entrega rápida, suporte técnico directo e condições exclusivas para profissionais.</p>
+      <div class="qs-pills">
+        <div class="qs-pill">
+          <span class="qs-pill-ic">🏆</span>
+          <div><strong>Distribuidor oficial PPA</strong><span>Parceiro autorizado em Portugal</span></div>
+        </div>
+        <div class="qs-pill">
+          <span class="qs-pill-ic">🚚</span>
+          <div><strong>Entrega rápida</strong><span>Toda a região Oeste e Lisboa</span></div>
+        </div>
+        <div class="qs-pill">
+          <span class="qs-pill-ic">🔧</span>
+          <div><strong>Suporte técnico</strong><span>Apoio directo por WhatsApp</span></div>
+        </div>
+        <div class="qs-pill">
+          <span class="qs-pill-ic">🛡️</span>
+          <div><strong>Garantia PPA</strong><span>Todos os produtos com garantia oficial</span></div>
+        </div>
+      </div>
+      <a href="https://wa.me/351926961099?text=Olá%2C+gostava+de+saber+mais" target="_blank" rel="noopener" class="qs-cta">
+        💬 Falar connosco
+      </a>
+    </div>
+    <div class="qs-right">
+      <div class="qs-stat-grid">
+        <div class="qs-stat">
+          <div class="qs-stat-n">PPA</div>
+          <div class="qs-stat-l">Marca oficial</div>
+        </div>
+        <div class="qs-stat">
+          <div class="qs-stat-n">32+</div>
+          <div class="qs-stat-l">Produtos em catálogo</div>
+        </div>
+        <div class="qs-stat">
+          <div class="qs-stat-n">2 anos</div>
+          <div class="qs-stat-l">Garantia oficial</div>
+        </div>
+        <div class="qs-stat">
+          <div class="qs-stat-n">Oeste</div>
+          <div class="qs-stat-l">Região de entrega</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ═══ SECÇÃO: CALCULADORA ═══ -->
+<section class="sec sec-calc" id="calculadora">
+<div class="wrap">
+  <div class="calc-header">
+    <div class="calc-ey">Ajuda para escolher</div>
+    <h2 class="calc-h">Qual motor é o certo para si?</h2>
+    <p class="calc-sub">Responda a 3 perguntas e recebe a recomendação do motor ideal para o seu portão.</p>
+  </div>
+  <div class="calc-card" id="calc-card">
+    <!-- Step 1 -->
+    <div class="calc-step on" id="cs-1">
+      <div class="calc-step-n">1 / 3</div>
+      <div class="calc-q">Que tipo de portão tem?</div>
+      <div class="calc-opts">
+        <button class="calc-opt" onclick="calcEscolha('tipo','correr',this)">
+          <span class="calc-opt-ic">↔️</span>
+          <span class="calc-opt-t">Portão de correr</span>
+          <span class="calc-opt-d">Desliza lateralmente</span>
+        </button>
+        <button class="calc-opt" onclick="calcEscolha('tipo','batente',this)">
+          <span class="calc-opt-ic">🚪</span>
+          <span class="calc-opt-t">Portão de batente</span>
+          <span class="calc-opt-d">Abre para dentro/fora</span>
+        </button>
+        <button class="calc-opt" onclick="calcEscolha('tipo','garagem',this)">
+          <span class="calc-opt-ic">🏠</span>
+          <span class="calc-opt-t">Porta de garagem</span>
+          <span class="calc-opt-d">Basculante ou seccional</span>
+        </button>
+      </div>
+    </div>
+    <!-- Step 2 -->
+    <div class="calc-step" id="cs-2">
+      <div class="calc-step-n">2 / 3</div>
+      <div class="calc-q" id="calc-q2">Qual o peso aproximado do portão?</div>
+      <div class="calc-opts" id="calc-opts2">
+        <!-- preenchido por JS -->
+      </div>
+    </div>
+    <!-- Step 3 -->
+    <div class="calc-step" id="cs-3">
+      <div class="calc-step-n">3 / 3</div>
+      <div class="calc-q">Qual o uso?</div>
+      <div class="calc-opts">
+        <button class="calc-opt" onclick="calcEscolha('uso','residencial',this)">
+          <span class="calc-opt-ic">🏡</span>
+          <span class="calc-opt-t">Residencial</span>
+          <span class="calc-opt-d">Casa particular, uso diário normal</span>
+        </button>
+        <button class="calc-opt" onclick="calcEscolha('uso','intensivo',this)">
+          <span class="calc-opt-ic">🏢</span>
+          <span class="calc-opt-t">Intensivo / Comercial</span>
+          <span class="calc-opt-d">Empresa, condomínio, muitas aberturas por dia</span>
+        </button>
+      </div>
+    </div>
+    <!-- Resultado -->
+    <div class="calc-step" id="cs-result">
+      <div class="calc-result-ic">✅</div>
+      <div class="calc-result-t" id="calc-result-t">Motor recomendado</div>
+      <div class="calc-result-prod" id="calc-result-prod"></div>
+      <div class="calc-result-why" id="calc-result-why"></div>
+      <div class="calc-result-acts">
+        <a id="calc-wa-btn" href="#" target="_blank" class="btn-calc-wa">💬 Pedir informação</a>
+        <button onclick="calcReset()" class="btn-calc-reset">↩ Recomeçar</button>
+      </div>
+    </div>
+    <!-- Progress -->
+    <div class="calc-progress" id="calc-progress">
+      <div class="calc-prog-fill" id="calc-prog-fill"></div>
+    </div>
+  </div>
+</div>
+</section>
 <section class="sec" id="parceiros">
 <div class="wrap">
 <div class="inst-grid">
