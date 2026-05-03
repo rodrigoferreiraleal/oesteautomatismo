@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
 Disallow: /admin.html
+Disallow: /admin_crm_v2.html
 
 Sitemap: https://www.oesteautomatismo.com/sitemap.xml
