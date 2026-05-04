@@ -1102,76 +1102,84 @@ function calcDesenharPortao(canvasId, tipo, material, largura, altura, progAbrir
   }
 
   // ─── PORTA DE GARAGEM (basculante) ───
-  // A porta sobe — fica paralela ao tecto lá dentro
+  // Movimento: porta sobe em linha recta, desaparece para dentro do tecto
   else if(tipo === 'garagem'){
-    // p=0: porta na vertical (fechada). p=1: porta na horizontal (aberta, no tecto)
-    // Animação: a porta bascule para cima — eixo no topo
-    // Perspectiva: ao abrir, a porta fica horizontal (vemos a espessura/interior)
+    // p=0: fechada (porta visível na vertical)
+    // p=1: aberta (porta subiu para dentro do tecto, apenas fundo da garagem visível)
 
-    if(p < 0.5){
-      // Fase 1 (0→0.5): porta ainda na vertical, mas levantando — translada para cima
-      const rise = gH * p * 0.4; // sobe levemente
-      const angle = p * 2 * Math.PI/6; // inclina ligeiramente (começo do basculo)
+    // A porta sobe linearmente: translação vertical pura, sem rotações
+    const rise = gH * p; // quanto já subiu (pixeis)
+    // A parte visível da porta vai de (gY + rise) até (gY + gH)
+    // Quando rise >= gH a porta está completamente dentro do tecto
+    const doorTop  = gY - rise + gH * 0; // topo da porta (sobe)
+    const doorBot  = gY + gH - rise;     // base da porta (sobe também)
+    const visTop   = Math.max(gY, doorTop);       // clip: parte visível começa em gY
+    const visBot   = Math.min(gY + gH, doorBot);  // clip: parte visível termina em gY+gH
+
+    // Trilhos laterais (guias fixas na parede)
+    ctx.strokeStyle = OR+'0.28)'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(gX-5, gY-12); ctx.lineTo(gX-5, gY+gH+8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(gX+gW+5, gY-12); ctx.lineTo(gX+gW+5, gY+gH+8); ctx.stroke();
+
+    // Fundo da garagem (aparece à medida que a porta sobe)
+    if(p > 0){
+      const interiorH = rise;
+      ctx.fillStyle = 'rgba(30,30,35,0.65)';
+      ctx.fillRect(gX, gY, gW, Math.min(interiorH, gH));
+      // Linha de piso interior
+      if(interiorH > 10){
+        ctx.strokeStyle = 'rgba(100,100,110,0.3)'; ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(gX, gY + Math.min(interiorH, gH)*0.85);
+        ctx.lineTo(gX+gW, gY + Math.min(interiorH, gH)*0.85);
+        ctx.stroke();
+      }
+    }
+
+    // Desenhar a parte visível da porta (sobe em linha recta)
+    if(visBot > visTop + 2){
+      // Clip: só mostrar entre gY e gY+gH
       ctx.save();
-      ctx.translate(gX + gW/2, gY);
-      ctx.rotate(-angle); // inclina o topo para dentro
+      ctx.beginPath(); ctx.rect(gX, gY, gW, gH); ctx.clip();
+
+      // Porta — posicionada em doorTop (que vai subindo)
       ctx.fillStyle = cor.fill;
-      ctx.fillRect(-gW/2, rise, gW, gH);
+      ctx.fillRect(gX, doorTop, gW, gH);
+
+      // Painéis horizontais (seccional)
       if(material !== 'ferro_chapa'){
-        ctx.strokeStyle = cor.grad; ctx.lineWidth = 0.9;
-        const pannels = 4;
-        for(let i=1;i<pannels;i++){ctx.beginPath();ctx.moveTo(-gW/2,rise+gH/pannels*i);ctx.lineTo(gW/2,rise+gH/pannels*i);ctx.stroke();}
-        const cols5 = Math.max(2, Math.round(largura));
-        for(let i=1;i<cols5;i++){ctx.beginPath();ctx.moveTo(-gW/2+gW/cols5*i,rise);ctx.lineTo(-gW/2+gW/cols5*i,rise+gH);ctx.stroke();}
-      }
-      ctx.restore();
-    } else {
-      // Fase 2 (0.5→1): porta bascula para horizontal (entra no tecto)
-      // Mostrar perspectiva isométrica da porta a "entrar" para cima/dentro
-      const t2 = (p - 0.5) * 2; // 0→1
-      const visH = gH * (1 - t2 * 0.92); // porta fica cada vez menos visível (entra no tecto)
-      const shrinkH = visH;
-      // a porta aparece acima — eixo no pilar topo
-      ctx.save();
-      ctx.fillStyle = cor.fill;
-      // Corpo da porta (aparece mais fino ao subir = perspectiva)
-      ctx.fillRect(gX, gY, gW, Math.max(4, shrinkH));
-      // Painel superior (tecto da garagem) aparece
-      if(t2 > 0.2){
-        const ceilH = gH * t2 * 0.15;
-        ctx.fillStyle = 'rgba(60,60,70,0.35)';
-        ctx.fillRect(gX, gY - ceilH*0.5, gW, ceilH);
-      }
-      if(shrinkH > 8 && material !== 'ferro_chapa'){
-        ctx.strokeStyle = cor.grad; ctx.lineWidth = 0.9;
-        const pannels2 = 4;
-        for(let i=1;i<pannels2;i++){
-          const py = gY + shrinkH/pannels2*i;
-          if(py < gY + shrinkH){ctx.beginPath();ctx.moveTo(gX,py);ctx.lineTo(gX+gW,py);ctx.stroke();}
+        ctx.strokeStyle = cor.grad; ctx.lineWidth = 1.2;
+        const panels = 4;
+        for(let i=1;i<panels;i++){
+          const py = doorTop + gH/panels*i;
+          ctx.beginPath(); ctx.moveTo(gX, py); ctx.lineTo(gX+gW, py); ctx.stroke();
+        }
+        // Painéis verticais subtis
+        ctx.lineWidth = 0.6;
+        const cols6 = Math.max(2, Math.round(largura));
+        for(let i=1;i<cols6;i++){
+          ctx.beginPath(); ctx.moveTo(gX+gW/cols6*i, doorTop); ctx.lineTo(gX+gW/cols6*i, doorTop+gH); ctx.stroke();
         }
       }
       ctx.restore();
     }
 
-    // Trilho vertical (guias da garagem nos pilares)
-    ctx.strokeStyle = OR+'0.3)'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(gX-4, gY); ctx.lineTo(gX-4, gY+gH+4); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(gX+gW+4, gY); ctx.lineTo(gX+gW+4, gY+gH+4); ctx.stroke();
-
-    // Trilho horizontal (no tecto) — aparece ao abrir
-    if(p > 0.3){
-      ctx.globalAlpha = Math.min(1, (p-0.3)/0.4);
-      ctx.strokeStyle = OR+'0.35)'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(gX-4, gY); ctx.lineTo(gX-4, gY-20); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(gX+gW+4, gY); ctx.lineTo(gX+gW+4, gY-20); ctx.stroke();
-      ctx.globalAlpha = 1;
-    }
-
-    // Motor no centro-topo (accionador)
-    ctx.fillStyle = OR+'0.92)';
-    const mx = gX + gW/2 - 8;
-    if(ctx.roundRect) ctx.roundRect(mx, gY+3, 16, 11, 3); else ctx.rect(mx, gY+3, 16, 11);
+    // Motor/accionador (fixo no tecto, não se move)
+    ctx.fillStyle = OR+'0.90)';
+    const motorX = gX + gW/2 - 8;
+    if(ctx.roundRect) ctx.roundRect(motorX, gY-14, 16, 12, 3);
+    else ctx.rect(motorX, gY-14, 16, 12);
     ctx.fill();
+
+    // Cabo do motor (linha do motor à porta)
+    if(p < 0.95){
+      const cableY = Math.max(gY, doorTop + 4);
+      ctx.strokeStyle = OR+'0.35)'; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(gX + gW/2, gY - 2);
+      ctx.lineTo(gX + gW/2, cableY);
+      ctx.stroke();
+    }
   }
 
   // Dimensões
