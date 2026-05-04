@@ -949,121 +949,240 @@ function calcDesenharPortao(canvasId, tipo, material, largura, altura, progAbrir
   const W = cv.width, H = cv.height;
   ctx.clearRect(0,0,W,H);
 
-  // Cores por material
   const cores = {
-    ferro_gradil: {fill:'rgba(85,90,100,0.85)', grad:'rgba(100,105,115,0.5)'},
-    ferro_chapa:  {fill:'rgba(70,75,85,0.9)',   grad:'rgba(90,95,105,0.6)'},
-    aluminio:     {fill:'rgba(180,190,205,0.85)',grad:'rgba(200,210,220,0.5)'},
-    madeira:      {fill:'rgba(140,95,50,0.85)',  grad:'rgba(160,115,70,0.5)'},
+    ferro_gradil: {fill:'rgba(85,90,100,0.85)', grad:'rgba(110,115,125,0.45)'},
+    ferro_chapa:  {fill:'rgba(68,72,82,0.92)',  grad:'rgba(90,95,105,0.3)'},
+    aluminio:     {fill:'rgba(175,185,200,0.88)',grad:'rgba(195,205,215,0.4)'},
+    madeira:      {fill:'rgba(135,90,45,0.88)',  grad:'rgba(158,108,60,0.4)'},
   };
   const cor = cores[material] || cores.ferro_gradil;
-  const or  = 'rgba(232,88,10,';
+  const OR  = 'rgba(232,88,10,';
 
-  // Escala: fittar portão na canvas com margem
-  const maxW = W * 0.72, maxH = H * 0.68;
+  const maxW = W * 0.70, maxH = H * 0.66;
   const escala = Math.min(maxW/largura, maxH/altura);
   const gW = largura * escala, gH = altura * escala;
-  const gX = (W - gW) / 2, gY = H * 0.12;
+  const gX = (W - gW) / 2, gY = H * 0.10;
+
+  const p = (progAbrir !== undefined ? Math.max(0,Math.min(1,progAbrir)) : 0);
 
   // Chão
-  ctx.strokeStyle = 'rgba(140,140,140,0.25)';
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(gX-16, gY+gH+6); ctx.lineTo(gX+gW+16, gY+gH+6); ctx.stroke();
+  ctx.strokeStyle = 'rgba(160,160,160,0.22)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(gX-18, gY+gH+7); ctx.lineTo(gX+gW+18, gY+gH+7); ctx.stroke();
 
   // Pilares
-  ctx.fillStyle = 'rgba(110,115,125,0.5)';
-  ctx.fillRect(gX-7, gY-3, 6, gH+8);
-  ctx.fillRect(gX+gW+1, gY-3, 6, gH+8);
+  ctx.fillStyle = 'rgba(115,120,130,0.5)';
+  ctx.fillRect(gX-9, gY-4, 7, gH+10);
+  ctx.fillRect(gX+gW+2, gY-4, 7, gH+10);
 
-  const p = (progAbrir !== undefined ? progAbrir : 0);
-
+  // ─── PORTÃO DE CORRER ───
   if(tipo === 'correr'){
-    const slide = gW * 0.62 * p;
+    const slide = gW * 0.60 * p;
     ctx.save();
-    ctx.beginPath(); ctx.rect(gX-2, gY-2, gW+4, gH+4); ctx.clip();
-    // Portão
+    ctx.beginPath(); ctx.rect(gX-1, gY-1, gW+2, gH+2); ctx.clip();
     ctx.fillStyle = cor.fill;
-    ctx.fillRect(gX-slide, gY, gW, gH);
-    // Grade
+    ctx.fillRect(gX - slide, gY, gW, gH);
+    ctx.strokeStyle = cor.grad; ctx.lineWidth = 0.9;
+    const cols = Math.max(3, Math.round(largura*2));
+    const rows = Math.max(2, Math.round(altura*1.5));
     if(material !== 'ferro_chapa'){
-      ctx.strokeStyle = cor.grad; ctx.lineWidth = 0.8;
-      const cols = Math.max(3, Math.round(largura*2));
-      const rows = Math.max(2, Math.round(altura*1.5));
-      for(let i=1;i<cols;i++){ ctx.beginPath(); ctx.moveTo(gX-slide+gW/cols*i,gY); ctx.lineTo(gX-slide+gW/cols*i,gY+gH); ctx.stroke(); }
-      for(let i=1;i<rows;i++){ ctx.beginPath(); ctx.moveTo(gX-slide,gY+gH/rows*i); ctx.lineTo(gX-slide+gW,gY+gH/rows*i); ctx.stroke(); }
+      for(let i=1;i<cols;i++){ctx.beginPath();ctx.moveTo(gX-slide+gW/cols*i,gY);ctx.lineTo(gX-slide+gW/cols*i,gY+gH);ctx.stroke();}
+      for(let i=1;i<rows;i++){ctx.beginPath();ctx.moveTo(gX-slide,gY+gH/rows*i);ctx.lineTo(gX-slide+gW,gY+gH/rows*i);ctx.stroke();}
     }
     ctx.restore();
     // Carril
-    ctx.strokeStyle = or+'0.35)'; ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.moveTo(gX-16,gY+gH+3); ctx.lineTo(gX+gW+2,gY+gH+3); ctx.stroke();
+    ctx.strokeStyle = OR+'0.4)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(gX-18,gY+gH+3); ctx.lineTo(gX+gW+6,gY+gH+3); ctx.stroke();
     // Motor
-    ctx.fillStyle = or+'0.9)';
-    const mx = gX+gW-18-slide, my = gY+gH/2-7;
-    ctx.beginPath();
-    if(ctx.roundRect) ctx.roundRect(mx,my,15,14,3); else ctx.rect(mx,my,15,14);
+    ctx.fillStyle = OR+'0.92)';
+    const mx = Math.max(gX+4, gX+gW-24-slide), my = gY+gH/2-8;
+    if(ctx.roundRect) ctx.roundRect(mx,my,17,16,4); else ctx.rect(mx,my,17,16);
     ctx.fill();
+    // Setas de movimento
+    if(p > 0 && p < 1){
+      for(let i=0;i<3;i++){
+        const ax = gX + gW*0.3 + i*18;
+        const ay = gY + gH*0.5;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay-7); ctx.lineTo(ax+9, ay); ctx.lineTo(ax, ay+7);
+        ctx.strokeStyle = OR+(0.5-i*0.15)+')'; ctx.lineWidth=1.5; ctx.stroke();
+      }
+    }
+  }
 
-  } else if(tipo === 'batente'){
-    // 2 folhas, abre para fora
-    const ang = p * Math.PI / 2.1;
-    // Folha esquerda
-    ctx.save();
-    ctx.translate(gX, gY + gH/2);
-    ctx.rotate(-ang);
-    ctx.fillStyle = cor.fill;
-    ctx.fillRect(0, -gH/2, gW/2-1, gH);
-    if(material !== 'ferro_chapa'){
-      ctx.strokeStyle = cor.grad; ctx.lineWidth = 0.7;
-      for(let i=1;i<3;i++){ ctx.beginPath(); ctx.moveTo(gW/2*i/3,gY-gH/2-gY); ctx.lineTo(gW/2*i/3,gH/2); ctx.stroke(); }
-    }
-    ctx.restore();
-    // Folha direita
-    ctx.save();
-    ctx.translate(gX+gW, gY + gH/2);
-    ctx.rotate(ang);
-    ctx.fillStyle = cor.fill;
-    ctx.fillRect(-(gW/2-1), -gH/2, gW/2-1, gH);
-    if(material !== 'ferro_chapa'){
-      ctx.strokeStyle = cor.grad; ctx.lineWidth = 0.7;
-      for(let i=1;i<3;i++){ ctx.beginPath(); ctx.moveTo(-gW/2+(gW/2)*i/3,-gH/2); ctx.lineTo(-gW/2+(gW/2)*i/3,gH/2); ctx.stroke(); }
-    }
-    ctx.restore();
-    // Motors
-    ctx.fillStyle = or+'0.9)';
-    const mSize = 13;
-    [[gX+3,gY+gH/2-mSize/2],[gX+gW-3-mSize,gY+gH/2-mSize/2]].forEach(([mx,my])=>{
+  // ─── PORTÃO DE BATENTE ───
+  // Abre como porta normal: eixo no pilar esquerdo, folha gira para fora (perspectiva)
+  else if(tipo === 'batente'){
+    const fold = p; // 0 = fechado, 1 = 90° aberto
+
+    if(largura >= 2.5){
+      // 2 folhas: cada uma abre pelo seu lado para fora
+      const fw = gW/2;
+
+      // Folha esquerda — eixo no pilar esquerdo, abre para a esquerda
+      ctx.save();
+      // Perspectiva: a folha fica mais curta horizontalmente ao abrir (projeção)
+      const leftW = fw * Math.cos(fold * Math.PI/2);
+      ctx.fillStyle = cor.fill;
       ctx.beginPath();
-      if(ctx.roundRect) ctx.roundRect(mx,my,mSize,mSize,3); else ctx.rect(mx,my,mSize,mSize);
+      ctx.moveTo(gX, gY);
+      ctx.lineTo(gX + leftW, gY);
+      ctx.lineTo(gX + leftW, gY + gH);
+      ctx.lineTo(gX, gY + gH);
+      ctx.closePath();
       ctx.fill();
-    });
+      if(material !== 'ferro_chapa' && leftW > 10){
+        ctx.strokeStyle = cor.grad; ctx.lineWidth = 0.9;
+        const cols2 = Math.max(2, Math.round(largura/2));
+        for(let i=1;i<cols2;i++){ctx.beginPath();ctx.moveTo(gX+leftW/cols2*i,gY);ctx.lineTo(gX+leftW/cols2*i,gY+gH);ctx.stroke();}
+        for(let i=1;i<3;i++){ctx.beginPath();ctx.moveTo(gX,gY+gH/3*i);ctx.lineTo(gX+leftW,gY+gH/3*i);ctx.stroke();}
+      }
+      // Sombra da folha no chão (profundidade)
+      if(fold > 0.1){
+        const shadowLen = fw * Math.sin(fold * Math.PI/2) * 0.4;
+        ctx.fillStyle = 'rgba(0,0,0,0.12)';
+        ctx.beginPath();
+        ctx.moveTo(gX, gY+gH+7);
+        ctx.lineTo(gX + leftW, gY+gH+7);
+        ctx.lineTo(gX + leftW - shadowLen, gY+gH+7+shadowLen*0.3);
+        ctx.lineTo(gX - shadowLen, gY+gH+7+shadowLen*0.3);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
 
-  } else if(tipo === 'garagem'){
-    // Basculante — sobe
-    const rise = gH * 0.88 * p;
-    ctx.fillStyle = cor.fill;
-    ctx.fillRect(gX, gY+rise, gW, gH);
-    // Painéis horizontais
-    ctx.strokeStyle = cor.grad; ctx.lineWidth = 0.7;
-    const paineis = 4;
-    for(let i=1;i<paineis;i++){ ctx.beginPath(); ctx.moveTo(gX,gY+rise+gH/paineis*i); ctx.lineTo(gX+gW,gY+rise+gH/paineis*i); ctx.stroke(); }
-    // Motor no tecto
-    ctx.fillStyle = or+'0.9)';
-    const cx = gX+gW/2;
-    ctx.beginPath();
-    if(ctx.roundRect) ctx.roundRect(cx-8,gY+rise+3,16,10,3); else ctx.rect(cx-8,gY+rise+3,16,10);
+      // Folha direita — eixo no pilar direito, abre para a direita
+      ctx.save();
+      const rightW = fw * Math.cos(fold * Math.PI/2);
+      const rx = gX + gW - rightW;
+      ctx.fillStyle = cor.fill;
+      ctx.beginPath();
+      ctx.moveTo(rx, gY);
+      ctx.lineTo(rx + rightW, gY);
+      ctx.lineTo(rx + rightW, gY + gH);
+      ctx.lineTo(rx, gY + gH);
+      ctx.closePath();
+      ctx.fill();
+      if(material !== 'ferro_chapa' && rightW > 10){
+        ctx.strokeStyle = cor.grad; ctx.lineWidth = 0.9;
+        const cols3 = Math.max(2, Math.round(largura/2));
+        for(let i=1;i<cols3;i++){ctx.beginPath();ctx.moveTo(rx+rightW/cols3*i,gY);ctx.lineTo(rx+rightW/cols3*i,gY+gH);ctx.stroke();}
+        for(let i=1;i<3;i++){ctx.beginPath();ctx.moveTo(rx,gY+gH/3*i);ctx.lineTo(rx+rightW,gY+gH/3*i);ctx.stroke();}
+      }
+      ctx.restore();
+
+    } else {
+      // 1 folha — eixo no pilar esquerdo, abre para fora (perspectiva)
+      const foldW = gW * Math.cos(fold * Math.PI/2);
+      ctx.save();
+      ctx.fillStyle = cor.fill;
+      ctx.beginPath();
+      ctx.moveTo(gX, gY);
+      ctx.lineTo(gX + foldW, gY);
+      ctx.lineTo(gX + foldW, gY + gH);
+      ctx.lineTo(gX, gY + gH);
+      ctx.closePath(); ctx.fill();
+      if(material !== 'ferro_chapa' && foldW > 10){
+        ctx.strokeStyle = cor.grad; ctx.lineWidth = 0.9;
+        const cols4 = Math.max(2, Math.round(largura));
+        for(let i=1;i<cols4;i++){ctx.beginPath();ctx.moveTo(gX+foldW/cols4*i,gY);ctx.lineTo(gX+foldW/cols4*i,gY+gH);ctx.stroke();}
+        for(let i=1;i<3;i++){ctx.beginPath();ctx.moveTo(gX,gY+gH/3*i);ctx.lineTo(gX+foldW,gY+gH/3*i);ctx.stroke();}
+      }
+      ctx.restore();
+    }
+
+    // Motors (braços PPA no topo interno das folhas)
+    ctx.fillStyle = OR+'0.92)';
+    const mSize = 12;
+    if(ctx.roundRect) ctx.roundRect(gX+2,gY+gH/2-mSize/2,mSize,mSize,3); else ctx.rect(gX+2,gY+gH/2-mSize/2,mSize,mSize);
     ctx.fill();
-    // Trilho do tecto
-    ctx.strokeStyle = or+'0.3)'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(gX+gW/2,gY); ctx.lineTo(gX+gW/2,gY+rise+3); ctx.stroke();
+    if(largura >= 2.5){
+      if(ctx.roundRect) ctx.roundRect(gX+gW-mSize-2,gY+gH/2-mSize/2,mSize,mSize,3); else ctx.rect(gX+gW-mSize-2,gY+gH/2-mSize/2,mSize,mSize);
+      ctx.fill();
+    }
+  }
+
+  // ─── PORTA DE GARAGEM (basculante) ───
+  // A porta sobe — fica paralela ao tecto lá dentro
+  else if(tipo === 'garagem'){
+    // p=0: porta na vertical (fechada). p=1: porta na horizontal (aberta, no tecto)
+    // Animação: a porta bascule para cima — eixo no topo
+    // Perspectiva: ao abrir, a porta fica horizontal (vemos a espessura/interior)
+
+    if(p < 0.5){
+      // Fase 1 (0→0.5): porta ainda na vertical, mas levantando — translada para cima
+      const rise = gH * p * 0.4; // sobe levemente
+      const angle = p * 2 * Math.PI/6; // inclina ligeiramente (começo do basculo)
+      ctx.save();
+      ctx.translate(gX + gW/2, gY);
+      ctx.rotate(-angle); // inclina o topo para dentro
+      ctx.fillStyle = cor.fill;
+      ctx.fillRect(-gW/2, rise, gW, gH);
+      if(material !== 'ferro_chapa'){
+        ctx.strokeStyle = cor.grad; ctx.lineWidth = 0.9;
+        const pannels = 4;
+        for(let i=1;i<pannels;i++){ctx.beginPath();ctx.moveTo(-gW/2,rise+gH/pannels*i);ctx.lineTo(gW/2,rise+gH/pannels*i);ctx.stroke();}
+        const cols5 = Math.max(2, Math.round(largura));
+        for(let i=1;i<cols5;i++){ctx.beginPath();ctx.moveTo(-gW/2+gW/cols5*i,rise);ctx.lineTo(-gW/2+gW/cols5*i,rise+gH);ctx.stroke();}
+      }
+      ctx.restore();
+    } else {
+      // Fase 2 (0.5→1): porta bascula para horizontal (entra no tecto)
+      // Mostrar perspectiva isométrica da porta a "entrar" para cima/dentro
+      const t2 = (p - 0.5) * 2; // 0→1
+      const visH = gH * (1 - t2 * 0.92); // porta fica cada vez menos visível (entra no tecto)
+      const shrinkH = visH;
+      // a porta aparece acima — eixo no pilar topo
+      ctx.save();
+      ctx.fillStyle = cor.fill;
+      // Corpo da porta (aparece mais fino ao subir = perspectiva)
+      ctx.fillRect(gX, gY, gW, Math.max(4, shrinkH));
+      // Painel superior (tecto da garagem) aparece
+      if(t2 > 0.2){
+        const ceilH = gH * t2 * 0.15;
+        ctx.fillStyle = 'rgba(60,60,70,0.35)';
+        ctx.fillRect(gX, gY - ceilH*0.5, gW, ceilH);
+      }
+      if(shrinkH > 8 && material !== 'ferro_chapa'){
+        ctx.strokeStyle = cor.grad; ctx.lineWidth = 0.9;
+        const pannels2 = 4;
+        for(let i=1;i<pannels2;i++){
+          const py = gY + shrinkH/pannels2*i;
+          if(py < gY + shrinkH){ctx.beginPath();ctx.moveTo(gX,py);ctx.lineTo(gX+gW,py);ctx.stroke();}
+        }
+      }
+      ctx.restore();
+    }
+
+    // Trilho vertical (guias da garagem nos pilares)
+    ctx.strokeStyle = OR+'0.3)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(gX-4, gY); ctx.lineTo(gX-4, gY+gH+4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(gX+gW+4, gY); ctx.lineTo(gX+gW+4, gY+gH+4); ctx.stroke();
+
+    // Trilho horizontal (no tecto) — aparece ao abrir
+    if(p > 0.3){
+      ctx.globalAlpha = Math.min(1, (p-0.3)/0.4);
+      ctx.strokeStyle = OR+'0.35)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(gX-4, gY); ctx.lineTo(gX-4, gY-20); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(gX+gW+4, gY); ctx.lineTo(gX+gW+4, gY-20); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    // Motor no centro-topo (accionador)
+    ctx.fillStyle = OR+'0.92)';
+    const mx = gX + gW/2 - 8;
+    if(ctx.roundRect) ctx.roundRect(mx, gY+3, 16, 11, 3); else ctx.rect(mx, gY+3, 16, 11);
+    ctx.fill();
   }
 
   // Dimensões
-  const isDark = window.matchMedia('(prefers-color-scheme:dark)').matches;
-  ctx.fillStyle = isDark ? 'rgba(200,200,200,0.6)' : 'rgba(100,100,100,0.6)';
+  ctx.fillStyle = 'rgba(150,150,150,0.7)';
   ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText(largura.toFixed(1)+'m', gX+gW/2, gY+gH+18);
-  ctx.save(); ctx.translate(gX-14,gY+gH/2); ctx.rotate(-Math.PI/2);
-  ctx.fillText(altura.toFixed(1)+'m', 0, 0); ctx.restore();
+  ctx.fillText(largura.toFixed(1)+'m', gX+gW/2, gY+gH+20);
+  ctx.save();
+  ctx.translate(gX-14, gY+gH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText(altura.toFixed(1)+'m', 0, 0);
+  ctx.restore();
 }
 
 function calcAnimar(canvasId){
