@@ -854,8 +854,12 @@ function pesquisarProdutos(q) {
 
 const CSIM = {tipo:null, material:null, uso:null, largura:3.0, altura:1.8};
 
-// Densidades reais (kg/m²) — fontes: engenharia metalúrgica
-const DENS = {ferro_gradil:25, ferro_chapa:45, aluminio:10, madeira:22};
+// Densidades realistas (kg/m²) — baseadas em medidas técnicas de portões automatizáveis:
+// Ferro c/ gradil: 30-40 kg/m² (estrutura tubular + barras decorativas)
+// Ferro chapa cheia: 45-55 kg/m² (chapa de aço de 1.5-2mm + reforços)
+// Alumínio: 10-14 kg/m² (perfis tubulares com reforços internos)
+// Madeira maciça: 35-50 kg/m² (madeira nobre/eucalipto/pinho tratado, espessura 4-5cm)
+const DENS = {ferro_gradil:35, ferro_chapa:50, aluminio:12, madeira:42};
 const DENS_NOME = {ferro_gradil:'Ferro c/ gradil', ferro_chapa:'Ferro chapa', aluminio:'Alumínio', madeira:'Madeira'};
 
 // Base técnica PPA verificada:
@@ -962,10 +966,12 @@ function calcGetMotor(){
   const {tipo, material, uso} = CSIM;
   const l = CSIM.largura, h = CSIM.altura;
   const area = l * h;
-  const dens = DENS[material] || 25;
+  const dens = DENS[material] || 35;
   const pesoEst = Math.round(area * dens);
-  // Margem de segurança de 25% (boa prática de instalação)
-  const pesoComMargem = Math.round(pesoEst * 1.25);
+  // Margem de segurança técnica: aplicar 30% para uso residencial, 50% para uso intensivo
+  // (motores devem trabalhar bem abaixo do seu limite máximo para durar)
+  const margemPct = uso === 'intensivo' ? 1.50 : 1.30;
+  const pesoComMargem = Math.round(pesoEst * margemPct);
 
   if(!tipo || !material || !uso) return null;
 
@@ -973,24 +979,43 @@ function calcGetMotor(){
   if(!m) return null;
 
   if(tipo==='correr'){
-    if(pesoComMargem > 800) return {...m.industrial, pesoEst, pesoComMargem};
-    if(uso==='intensivo') return {...m.intensivo, pesoEst, pesoComMargem};
-    if(pesoComMargem <= 375) return {...m.leve_r, pesoEst, pesoComMargem};
-    if(pesoComMargem <= 650) return {...m.medio_r, pesoEst, pesoComMargem};
+    // Limites alinhados com capacidades reais dos motores PPA:
+    // DZ Hub 550: até 550kg → recomendado para portões reais até ~250kg c/ margem (cobre maioria das casas pequenas/médias com portão leve)
+    // DZ Stark 650: até 650kg → recomendado para portões 250-450kg c/ margem
+    // DZ Rio 800: até 800kg → recomendado para portões 450-700kg c/ margem
+    // DZ Brutalle 2.0T: até 2000kg → portões >700kg ou industriais
+    
+    // Acima de 700kg com margem → industrial (Brutalle)
+    if(pesoComMargem > 700) return {...m.industrial, pesoEst, pesoComMargem};
+    // Uso intensivo com peso médio-alto (>250kg margem) → Rio 800 (70 ciclos/h)
+    if(uso==='intensivo' && pesoComMargem > 250) return {...m.intensivo, pesoEst, pesoComMargem};
+    // Portão leve (até 250kg com margem ~ até 190kg real)
+    if(pesoComMargem <= 250) return {...m.leve_r, pesoEst, pesoComMargem};
+    // Portão médio (250-450kg)
+    if(pesoComMargem <= 450) return {...m.medio_r, pesoEst, pesoComMargem};
+    // Portão pesado (450-700kg)
     return {...m.pesado_r, pesoEst, pesoComMargem};
   }
   if(tipo==='batente'){
     // Batente: o peso é por folha (dividir por 2 se for 2 folhas)
     // Assumir 2 folhas para portão com largura >= 2m
-    const pesoFolha = l >= 2 ? pesoEst/2 : pesoEst;
-    const pesoFolhaMargem = Math.round(pesoFolha * 1.25);
-    if(pesoFolhaMargem <= 125) return {...m.leve_r, pesoEst:Math.round(pesoFolha), pesoComMargem:pesoFolhaMargem, infoFolha:true};
-    if(pesoFolhaMargem <= 250) return {...m.medio_r, pesoEst:Math.round(pesoFolha), pesoComMargem:pesoFolhaMargem, infoFolha:true};
-    return {...m.pesado_r, pesoEst:Math.round(pesoFolha), pesoComMargem:pesoFolhaMargem, infoFolha:true};
+    const ehDuasFolhas = l >= 2;
+    const pesoFolha = ehDuasFolhas ? pesoEst/2 : pesoEst;
+    const pesoFolhaMargem = Math.round(pesoFolha * margemPct);
+    
+    // Pivo Home Jetflex: até 125kg/folha → portões até ~95kg/folha real c/ margem
+    // SK Predial Jetflex Standard: até 250kg/folha → portões 95-190kg/folha
+    // SK Predial Jetflex Super: até 250kg/folha mas trilho maior → portões com folha >2m de largura ou peso >190kg/folha
+    
+    if(pesoFolhaMargem <= 95) return {...m.leve_r, pesoEst:Math.round(pesoFolha), pesoComMargem:pesoFolhaMargem, infoFolha:true};
+    // Folhas grandes (>2.5m de largura por folha) ou pesadas vão para Super
+    const larguraFolha = ehDuasFolhas ? l/2 : l;
+    if(pesoFolhaMargem > 190 || larguraFolha > 2.5) return {...m.pesado_r, pesoEst:Math.round(pesoFolha), pesoComMargem:pesoFolhaMargem, infoFolha:true};
+    return {...m.medio_r, pesoEst:Math.round(pesoFolha), pesoComMargem:pesoFolhaMargem, infoFolha:true};
   }
   if(tipo==='garagem'){
     if(uso==='intensivo') return {...m.intensivo, pesoEst, pesoComMargem};
-    if(pesoEst > 200) return {...m.pesado_r, pesoEst, pesoComMargem};
+    if(pesoComMargem > 200) return {...m.pesado_r, pesoEst, pesoComMargem};
     return {...m.leve_r, pesoEst, pesoComMargem};
   }
   return null;
