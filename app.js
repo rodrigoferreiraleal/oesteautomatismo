@@ -510,13 +510,33 @@ function inferirPeso(produto) {
 }
 
 function criarCardProduto(p) {
-  const preco = p.preco_sem_iva || 0;
-  const precoIva = p.preco_com_iva || (preco * 1.23);
+  const precoBase = p.preco_sem_iva || 0;
+  const precoIvaBase = p.preco_com_iva || (precoBase * 1.23);
   const peso = inferirPeso(p);
   const tab = inferirTab(p);
 
+  // ── PROMOÇÃO: verificar se está activa e dentro do período ──
+  const agora = new Date();
+  const inicio = p.promo_inicio ? new Date(p.promo_inicio) : null;
+  const fim = p.promo_fim ? new Date(p.promo_fim) : null;
+  // Se promo_fim não tem hora (vem como 'YYYY-MM-DD'), considerar fim do dia
+  if (fim && p.promo_fim && p.promo_fim.length <= 10) fim.setHours(23,59,59,999);
+  const promoNoPeriodo =
+    p.promo_ativa &&
+    p.promo_desconto_pct > 0 &&
+    (!inicio || agora >= inicio) &&
+    (!fim || agora <= fim);
+
+  const desconto = promoNoPeriodo ? Number(p.promo_desconto_pct) : 0;
+  const preco = promoNoPeriodo ? precoBase * (1 - desconto/100) : precoBase;
+  const precoIva = promoNoPeriodo ? precoIvaBase * (1 - desconto/100) : precoIvaBase;
+
   const ribbon = p.ribbon
     ? `<div class="pc-ribbon ${p.ribbon.toLowerCase().includes('mais vendido') ? 'or' : p.ribbon.toLowerCase().includes('industrial') ? 'rec' : p.ribbon.toLowerCase().includes('alta') ? 'yw' : 'or'}">${p.ribbon}</div>`
+    : '';
+
+  const promoBadge = promoNoPeriodo
+    ? `<div class="pc-promo-badge">${(p.promo_badge && p.promo_badge.trim()) ? p.promo_badge : '-' + Math.round(desconto) + '%'}</div>`
     : '';
 
   const tags = (p.tags || []).map(t => `<span class="pc-tag">${t}</span>`).join('');
@@ -527,9 +547,38 @@ function criarCardProduto(p) {
 
   const imgSrc = p.img_url || 'https://gpanomdrhvnqqdutdtfe.supabase.co/storage/v1/object/public/imagens-produtos/placeholder.png';
 
+  // ── BLOCO DE PREÇO: com ou sem promo ──
+  const precoHTML = promoNoPeriodo ? `
+    <div class="pc-price-row pc-price-promo">
+      <div class="pc-price">
+        <span class="pc-plbl">S/ IVA</span>
+        <span class="pc-pold"><s>${precoBase.toFixed(2)}€</s></span>
+        <span class="pc-pval pc-pnew">${preco.toFixed(2)}€</span>
+      </div>
+      <div class="pc-price">
+        <span class="pc-plbl">C/ IVA</span>
+        <span class="pc-pold"><s>${precoIvaBase.toFixed(2)}€</s></span>
+        <span class="pc-piva pc-pnew">${precoIva.toFixed(2)}€</span>
+      </div>
+    </div>` : `
+    <div class="pc-price-row">
+      <div class="pc-price">
+        <span class="pc-plbl">S/ IVA</span>
+        <span class="pc-pval">${preco.toFixed(2)}€</span>
+      </div>
+      <div class="pc-price">
+        <span class="pc-plbl">C/ IVA</span>
+        <span class="pc-piva">${precoIva.toFixed(2)}€</span>
+      </div>
+    </div>`;
+
   return `
 <div class="pc" data-peso="${peso}" data-tab="${tab}" data-id="${p.id}">
   ${ribbon}
+  ${promoBadge}
+  <button class="pc-share-btn" type="button" onclick="abrirPartilha(${p.id});event.stopPropagation()" title="Partilhar produto" aria-label="Partilhar">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+  </button>
   <div class="pc-img">
     <img src="${imgSrc}" alt="${p.nome}" loading="lazy" style="width:100%;height:136px;object-fit:contain"/>
   </div>
@@ -543,16 +592,7 @@ function criarCardProduto(p) {
       return desc ? `<div class="pc-desc">${desc}</div>` : '';
     })()}
     ${wifiBadge}
-    <div class="pc-price-row">
-      <div class="pc-price">
-        <span class="pc-plbl">S/ IVA</span>
-        <span class="pc-pval">${preco.toFixed(2)}€</span>
-      </div>
-      <div class="pc-price">
-        <span class="pc-plbl">C/ IVA</span>
-        <span class="pc-piva">${precoIva.toFixed(2)}€</span>
-      </div>
-    </div>
+    ${precoHTML}
     
   </div>
   <div class="pc-foot">
@@ -574,6 +614,8 @@ async function carregarProdutos() {
     });
     if (!r.ok) throw new Error('Erro ' + r.status);
     const produtos = await r.json();
+    // Guardar globalmente para uso na partilha
+    window.__produtosLoja = produtos;
 
     // Agrupar por tab
     const grupos = {};
@@ -1362,4 +1404,169 @@ document.addEventListener('DOMContentLoaded', ()=>{
 });
 if(document.readyState==='complete'||document.readyState==='interactive'){
   setTimeout(calcDesenharPreviews, 600);
+}
+
+/* ════════════════════ PARTILHA DE PRODUTOS ════════════════════ */
+function abrirPartilha(produtoId){
+  const produtos = window.__produtosLoja || [];
+  const p = produtos.find(x => x.id === produtoId);
+  if(!p){ console.warn('Produto não encontrado para partilha:', produtoId); return; }
+
+  // Calcular preço atual (com promo se aplicável)
+  const precoBase = p.preco_sem_iva || 0;
+  const precoIvaBase = p.preco_com_iva || (precoBase * 1.23);
+  const agora = new Date();
+  const inicio = p.promo_inicio ? new Date(p.promo_inicio) : null;
+  const fim = p.promo_fim ? new Date(p.promo_fim) : null;
+  if (fim && p.promo_fim && p.promo_fim.length <= 10) fim.setHours(23,59,59,999);
+  const promoOn = p.promo_ativa && p.promo_desconto_pct > 0
+    && (!inicio || agora >= inicio) && (!fim || agora <= fim);
+  const precoFinal = promoOn ? precoBase * (1 - Number(p.promo_desconto_pct)/100) : precoBase;
+  const precoIvaFinal = promoOn ? precoIvaBase * (1 - Number(p.promo_desconto_pct)/100) : precoIvaBase;
+
+  // URL canónica do produto (link para a loja com âncora)
+  const baseUrl = location.origin + location.pathname.replace(/\/(index\.html)?$/, '/');
+  const urlProduto = baseUrl + 'index.html#produto-' + p.id;
+
+  // Texto da partilha
+  const linhas = [];
+  linhas.push('🛒 ' + p.nome + ' — ' + (p.marca || 'PPA'));
+  if(promoOn){
+    linhas.push('🔥 PROMOÇÃO: ' + precoBase.toFixed(2) + '€ → ' + precoFinal.toFixed(2) + '€ s/IVA');
+    linhas.push('   (' + precoIvaFinal.toFixed(2) + '€ c/IVA)');
+  } else {
+    linhas.push('💶 ' + precoFinal.toFixed(2) + '€ s/IVA · ' + precoIvaFinal.toFixed(2) + '€ c/IVA');
+  }
+  if(p.descricao) linhas.push('\n' + p.descricao.substring(0, 140) + (p.descricao.length > 140 ? '...' : ''));
+  linhas.push('\n' + urlProduto);
+  linhas.push('\nOeste Automatismo · oesteautomatismo.com');
+  const texto = linhas.join('\n');
+  const textoUrlEnc = encodeURIComponent(texto);
+  const urlEnc = encodeURIComponent(urlProduto);
+
+  // Construir overlay
+  let ov = document.getElementById('partilha-overlay');
+  if(ov) ov.remove();
+  ov = document.createElement('div');
+  ov.id = 'partilha-overlay';
+  ov.className = 'partilha-ov';
+  ov.innerHTML = `
+    <div class="partilha-bx" onclick="event.stopPropagation()">
+      <div class="partilha-hd">
+        <div>
+          <div class="partilha-tit">Partilhar produto</div>
+          <div class="partilha-sub">${p.nome}</div>
+        </div>
+        <button class="partilha-x" onclick="fecharPartilha()" aria-label="Fechar">✕</button>
+      </div>
+      <div class="partilha-grid">
+        <a class="partilha-btn pbt-wa" href="https://wa.me/?text=${textoUrlEnc}" target="_blank" rel="noopener" onclick="fecharPartilha()">
+          <div class="partilha-ico" style="background:#25D366">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.549 4.116 1.512 5.85L.057 23.04a.75.75 0 0 0 .906.906l5.19-1.455A11.952 11.952 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.726 9.726 0 0 1-4.952-1.352l-.356-.213-3.683 1.032 1.033-3.683-.213-.356A9.75 9.75 0 1 1 12 21.75z"/></svg>
+          </div>
+          <span>WhatsApp</span>
+        </a>
+        <a class="partilha-btn pbt-fb" href="https://www.facebook.com/sharer/sharer.php?u=${urlEnc}&quote=${textoUrlEnc}" target="_blank" rel="noopener" onclick="fecharPartilha()">
+          <div class="partilha-ico" style="background:#1877F2">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          </div>
+          <span>Facebook</span>
+        </a>
+        <button class="partilha-btn pbt-ig" type="button" onclick="partilharInstagram(${p.id})">
+          <div class="partilha-ico" style="background:linear-gradient(135deg,#833AB4,#FD1D1D,#FCB045)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+          </div>
+          <span>Instagram</span>
+        </button>
+        <button class="partilha-btn pbt-cp" type="button" onclick="partilharCopiar(${p.id})">
+          <div class="partilha-ico" style="background:#1F2937">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </div>
+          <span>Copiar link</span>
+        </button>
+      </div>
+      <div class="partilha-link">
+        <input type="text" id="partilha-url-input" value="${urlProduto}" readonly onclick="this.select()">
+      </div>
+    </div>
+  `;
+  ov.addEventListener('click', fecharPartilha);
+  document.body.appendChild(ov);
+  // Forçar reflow para animação
+  requestAnimationFrame(()=> ov.classList.add('show'));
+  // Guardar dados para usos seguintes
+  window.__partilhaDados = { texto, urlProduto, produto: p };
+}
+
+function fecharPartilha(){
+  const ov = document.getElementById('partilha-overlay');
+  if(!ov) return;
+  ov.classList.remove('show');
+  setTimeout(()=> ov.remove(), 200);
+}
+
+function partilharCopiar(produtoId){
+  const dados = window.__partilhaDados;
+  if(!dados) return;
+  const tex = dados.texto;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(tex).then(()=>{
+      partilhaToast('✓ Link e texto copiados — cola onde quiseres');
+    }).catch(()=> _copiarFallback(tex));
+  } else {
+    _copiarFallback(tex);
+  }
+}
+function _copiarFallback(tex){
+  const ta = document.createElement('textarea');
+  ta.value = tex; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); partilhaToast('✓ Texto copiado'); }
+  catch(e){ partilhaToast('Não foi possível copiar — selecciona manualmente'); }
+  document.body.removeChild(ta);
+}
+
+function partilharInstagram(produtoId){
+  // Instagram não tem API web de partilha directa.
+  // Estratégia: tentar Web Share API (no telemóvel mostra o Instagram entre as opções),
+  // e em paralelo copiar o texto para o clipboard para colar no Instagram.
+  const dados = window.__partilhaDados;
+  if(!dados) return;
+
+  // Copiar texto para clipboard primeiro
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(dados.texto).catch(()=>{});
+  }
+
+  // No telemóvel: tentar Web Share API
+  if(navigator.share){
+    navigator.share({
+      title: dados.produto.nome,
+      text: dados.texto,
+      url: dados.urlProduto
+    }).then(()=> fecharPartilha())
+      .catch(()=>{
+        // Utilizador cancelou ou erro — mostrar instruções
+        partilhaToast('Texto copiado — abre o Instagram e cola na publicação ou story');
+      });
+  } else {
+    // Desktop: não há partilha directa para Instagram, abrir Instagram numa nova tab
+    partilhaToast('Texto copiado — cola no Instagram');
+    setTimeout(()=> window.open('https://www.instagram.com/', '_blank'), 800);
+  }
+}
+
+function partilhaToast(msg){
+  let t = document.getElementById('partilha-toast');
+  if(t) t.remove();
+  t = document.createElement('div');
+  t.id = 'partilha-toast';
+  t.className = 'partilha-toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(()=> t.classList.add('show'));
+  setTimeout(()=>{
+    t.classList.remove('show');
+    setTimeout(()=> t.remove(), 300);
+  }, 2800);
 }
