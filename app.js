@@ -535,8 +535,22 @@ function criarCardProduto(p) {
     ? `<div class="pc-ribbon ${p.ribbon.toLowerCase().includes('mais vendido') ? 'or' : p.ribbon.toLowerCase().includes('industrial') ? 'rec' : p.ribbon.toLowerCase().includes('alta') ? 'yw' : 'or'}">${p.ribbon}</div>`
     : '';
 
+  // ── BADGE de % desconto sobre a imagem ──
   const promoBadge = promoNoPeriodo
     ? `<div class="pc-promo-badge">${(p.promo_badge && p.promo_badge.trim()) ? p.promo_badge : '-' + Math.round(desconto) + '%'}</div>`
+    : '';
+
+  // ── FITA diagonal "OFERTA" no canto superior direito ──
+  const promoFita = promoNoPeriodo
+    ? `<div class="pc-promo-fita"><span>OFERTA</span></div>`
+    : '';
+
+  // ── COUNTDOWN se houver data fim ──
+  const promoTimer = (promoNoPeriodo && fim)
+    ? `<div class="pc-promo-timer" data-fim="${fim.getTime()}" data-id="${p.id}">
+         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+         <span class="pc-promo-timer-txt">A calcular...</span>
+       </div>`
     : '';
 
   const tags = (p.tags || []).map(t => `<span class="pc-tag">${t}</span>`).join('');
@@ -572,9 +586,13 @@ function criarCardProduto(p) {
       </div>
     </div>`;
 
+  // Classe extra "pc-promo-on" quando há promoção activa
+  const cardCls = 'pc' + (promoNoPeriodo ? ' pc-promo-on' : '');
+
   return `
-<div class="pc" data-peso="${peso}" data-tab="${tab}" data-id="${p.id}">
+<div class="${cardCls}" data-peso="${peso}" data-tab="${tab}" data-id="${p.id}">
   ${ribbon}
+  ${promoFita}
   ${promoBadge}
   <button class="pc-share-btn" type="button" onclick="abrirPartilha(${p.id});event.stopPropagation()" title="Partilhar produto" aria-label="Partilhar">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -593,7 +611,7 @@ function criarCardProduto(p) {
     })()}
     ${wifiBadge}
     ${precoHTML}
-    
+    ${promoTimer}
   </div>
   <div class="pc-foot">
     <button class="btn-cart" onclick="adicionarAoCarrinho(this)">
@@ -1569,4 +1587,83 @@ function partilhaToast(msg){
     t.classList.remove('show');
     setTimeout(()=> t.remove(), 300);
   }, 2800);
+}
+
+/* ════════════════════ COUNTDOWN PROMOÇÕES ════════════════════ */
+function formatarTempoRestante(ms){
+  if(ms <= 0) return null;
+  const seg = Math.floor(ms/1000);
+  const min = Math.floor(seg/60);
+  const horas = Math.floor(min/60);
+  const dias = Math.floor(horas/24);
+
+  if(dias >= 2){
+    return `Termina em ${dias}d ${horas % 24}h`;
+  }
+  if(dias === 1){
+    return `Termina em 1d ${horas % 24}h`;
+  }
+  if(horas >= 1){
+    return `Termina em ${horas}h ${min % 60}m`;
+  }
+  if(min >= 1){
+    return `Termina em ${min}m`;
+  }
+  return `Termina em ${seg}s`;
+}
+
+function actualizarCountdownsPromo(){
+  const timers = document.querySelectorAll('.pc-promo-timer');
+  if(!timers.length) return;
+  const agora = Date.now();
+  let algumExpirou = false;
+  timers.forEach(t => {
+    const fim = parseInt(t.getAttribute('data-fim'), 10);
+    if(!fim) return;
+    const restante = fim - agora;
+    const txt = t.querySelector('.pc-promo-timer-txt');
+    if(restante <= 0){
+      // Promo expirou — marcar para recarregar
+      algumExpirou = true;
+      if(txt) txt.textContent = 'Promoção terminada';
+      t.classList.add('expirado');
+    } else {
+      if(txt) txt.textContent = formatarTempoRestante(restante);
+      // Pulsar mais forte se faltar menos de 24h
+      if(restante < 24*60*60*1000){
+        t.classList.add('urgente');
+      }
+    }
+  });
+  // Se alguma promo expirou, recarregar produtos para atualizar UI
+  if(algumExpirou){
+    if(typeof carregarProdutos === 'function'){
+      setTimeout(()=> carregarProdutos(), 1500);
+    }
+  }
+}
+
+// Iniciar o ciclo de actualização — corre a cada 30 segundos
+let _promoTimerInterval = null;
+function iniciarCountdownPromos(){
+  // Actualizar imediatamente
+  actualizarCountdownsPromo();
+  // Limpar interval anterior se existir (em caso de re-render)
+  if(_promoTimerInterval) clearInterval(_promoTimerInterval);
+  _promoTimerInterval = setInterval(actualizarCountdownsPromo, 30000); // a cada 30s
+}
+
+// Auto-iniciar quando os produtos carregarem
+document.addEventListener('DOMContentLoaded', ()=>{
+  // Iniciar após pequeno delay para garantir que os cards já foram renderizados
+  setTimeout(iniciarCountdownPromos, 1500);
+});
+// Re-iniciar sempre que os produtos forem recarregados
+const _origCarregar = typeof carregarProdutos === 'function' ? carregarProdutos : null;
+if(_origCarregar){
+  carregarProdutos = async function(){
+    const r = await _origCarregar.apply(this, arguments);
+    setTimeout(iniciarCountdownPromos, 300);
+    return r;
+  };
 }
