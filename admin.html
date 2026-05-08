@@ -502,7 +502,7 @@ input:checked+.sw-sl:before{transform:translateX(16px)}
         <div class="fg"><label>Marca</label><input id="fp-marca" value="PPA" type="text"></div>
       </div>
       <div class="fg-row3">
-        <div class="fg"><label>Preço s/IVA</label><input id="fp-preco" type="number" step="0.01" oninput="calcIva()"></div>
+        <div class="fg"><label>Preço s/IVA</label><input id="fp-preco" type="number" step="0.01" oninput="calcIva();calcPromoPreview()"></div>
         <div class="fg"><label>Preço c/IVA</label><input id="fp-iva" type="number" step="0.01" readonly style="background:var(--sf)"></div>
         <div class="fg"><label>Ordem</label><input id="fp-ordem" type="number" value="99"></div>
       </div>
@@ -513,6 +513,26 @@ input:checked+.sw-sl:before{transform:translateX(16px)}
         </div>
       </div>
       <div class="fg"><label>Descrição</label><textarea id="fp-desc"></textarea></div>
+
+      <!-- ━━━━━━━━━━ PROMOÇÃO ━━━━━━━━━━ -->
+      <div style="margin-top:18px;padding:14px;border:1.5px dashed #FCA5A5;border-radius:var(--r);background:#FEF2F2">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <label style="margin:0;font-weight:700;color:#DC2626;font-size:13px">🔥 Promoção / Destaque</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mu);cursor:pointer">
+            <input type="checkbox" id="fp-promo-ativa" onchange="togglePromoFields()" style="width:16px;height:16px;cursor:pointer">
+            Ativar promoção
+          </label>
+        </div>
+        <div id="fp-promo-fields" style="display:none">
+          <div class="fg-row3">
+            <div class="fg"><label>Desconto %</label><input id="fp-promo-pct" type="number" step="0.1" min="0" max="99" placeholder="Ex: 20" oninput="calcPromoPreview()"></div>
+            <div class="fg"><label>Início</label><input id="fp-promo-inicio" type="date"></div>
+            <div class="fg"><label>Fim</label><input id="fp-promo-fim" type="date"></div>
+          </div>
+          <div class="fg"><label>Etiqueta visível (badge)</label><input id="fp-promo-badge" type="text" placeholder="Ex: PROMO, -20%, BLACK FRIDAY..." maxlength="20"></div>
+          <div id="fp-promo-preview" style="margin-top:8px;font-size:12px;color:var(--mu);padding:8px 10px;background:var(--white);border-radius:var(--r2);border:1px solid var(--bd)"></div>
+        </div>
+      </div>
     </div>
     <div class="modal-ft">
       <button class="btn btn-red btn-sm" id="fp-del" onclick="apagarProd()" style="display:none">Apagar</button>
@@ -928,6 +948,7 @@ function filtrarInst(){
           <option value="contactado" ${estado==='contactado'?'selected':''}>Contactado</option>
           <option value="aprovado" ${estado==='aprovado'?'selected':''}>Aprovado</option>
         </select>
+        <button onclick="apagarInst(${i.id},'${esc((i.nome||'').replace(/'/g,'\\\''))}')" title="Apagar lead" style="background:transparent;border:1px solid var(--bd);color:var(--mu);font-size:14px;padding:5px 9px;border-radius:var(--r2);cursor:pointer;font-family:inherit" onmouseover="this.style.background='#FEE2E2';this.style.borderColor='#DC2626';this.style.color='#DC2626'" onmouseout="this.style.background='transparent';this.style.borderColor='var(--bd)';this.style.color='var(--mu)'">✕</button>
       </div>
     </div>`;}).join('');
 }
@@ -938,6 +959,18 @@ async function alterarEstadoInst(id,estado){
     const i=instaladores.find(x=>x.id===id);if(i)i.estado=estado;
     filtrarInst();renderInstStats();initDash();toast('Estado actualizado','ok');
   }catch(e){toast('Erro','err');}
+}
+
+async function apagarInst(id,nome){
+  if(!confirm(`Apagar definitivamente o lead "${nome}"?\n\nEsta ação não pode ser desfeita.`))return;
+  try{
+    await api(`leads_instaladores?id=eq.${id}`,{method:'DELETE'});
+    instaladores=instaladores.filter(x=>x.id!==id);
+    filtrarInst();renderInstStats();
+    document.getElementById('tc-inst').textContent=instaladores.length;
+    initDash();
+    toast('Lead apagado','ok');
+  }catch(e){toast('Erro: '+e.message,'err');}
 }
 
 /* ════════════════════ ORÇAMENTOS ════════════════════ */
@@ -1161,6 +1194,13 @@ function abrirModalProd(p=null){
   document.getElementById('fp-ativo').value=String(p?.ativo!==false);
   document.getElementById('fp-desc').value=p?.descricao||'';
   document.getElementById('fp-img-url').value=p?.img_url||'';
+  // Campos de promoção
+  document.getElementById('fp-promo-ativa').checked=!!p?.promo_ativa;
+  document.getElementById('fp-promo-pct').value=p?.promo_desconto_pct||'';
+  document.getElementById('fp-promo-inicio').value=p?.promo_inicio?p.promo_inicio.substring(0,10):'';
+  document.getElementById('fp-promo-fim').value=p?.promo_fim?p.promo_fim.substring(0,10):'';
+  document.getElementById('fp-promo-badge').value=p?.promo_badge||'';
+  togglePromoFields();
   document.getElementById('fp-del').style.display=p?'inline-flex':'none';
   document.getElementById('prod-modal-titulo').textContent=p?'Editar produto':'Novo produto';
   document.getElementById('ustatus').textContent='';document.getElementById('uprog').style.display='none';
@@ -1168,6 +1208,22 @@ function abrirModalProd(p=null){
   else{document.getElementById('uzone-inner').innerHTML='<div class="uzone-ico">📷</div><div class="uzone-txt">Clica ou arrasta</div><div class="uzone-sub">PNG, JPG, WEBP — máx 5MB</div>';}
   document.getElementById('fp-img-file').value='';
   abrirOv('ov-prod');
+}
+
+function togglePromoFields(){
+  const on=document.getElementById('fp-promo-ativa').checked;
+  document.getElementById('fp-promo-fields').style.display=on?'block':'none';
+  if(on)calcPromoPreview();
+}
+
+function calcPromoPreview(){
+  const pct=parseFloat(document.getElementById('fp-promo-pct').value)||0;
+  const preco=parseFloat(document.getElementById('fp-preco').value)||0;
+  const el=document.getElementById('fp-promo-preview');
+  if(!preco||!pct){el.innerHTML='<i style="color:var(--mu2)">Preenche o desconto para ver a pré-visualização</i>';return;}
+  const novo=preco*(1-pct/100);
+  const novoIva=novo*1.23;
+  el.innerHTML=`<b>Pré-visualização:</b> <s style="color:var(--mu2)">${preco.toFixed(2)}€</s> → <b style="color:#DC2626">${novo.toFixed(2)}€ s/IVA</b> &nbsp;·&nbsp; ${novoIva.toFixed(2)}€ c/IVA`;
 }
 function editarProdModal(id){abrirModalProd(produtos.find(x=>x.id===id));}
 
@@ -1206,7 +1262,12 @@ async function guardarProd(){
       preco_com_iva:parseFloat(document.getElementById('fp-iva').value)||0,
       preco_instalador:0,ordem:parseInt(document.getElementById('fp-ordem').value)||99,
       ribbon:document.getElementById('fp-ribbon').value,ativo:document.getElementById('fp-ativo').value==='true',
-      descricao:document.getElementById('fp-desc').value,img_url:url};
+      descricao:document.getElementById('fp-desc').value,img_url:url,
+      promo_ativa:document.getElementById('fp-promo-ativa').checked,
+      promo_desconto_pct:parseFloat(document.getElementById('fp-promo-pct').value)||0,
+      promo_inicio:document.getElementById('fp-promo-inicio').value||null,
+      promo_fim:document.getElementById('fp-promo-fim').value||null,
+      promo_badge:document.getElementById('fp-promo-badge').value||''};
     const id=document.getElementById('fp-id').value;
     if(id){await api(`produtos?id=eq.${id}`,{method:'PATCH',body:JSON.stringify(dados)});const idx=produtos.findIndex(x=>x.id==id);if(idx>=0)produtos[idx]={...produtos[idx],...dados};}
     else{const res=await api('produtos',{method:'POST',body:JSON.stringify(dados)});if(res&&res[0])produtos.push(res[0]);}
